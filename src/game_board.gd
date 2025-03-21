@@ -514,7 +514,7 @@ func _validate_submission(player_id: int, submission: Dictionary[Vector2i, int])
 	
 	# Check words with WordCheck.
 	for word: String in words:
-		if !(await _word_check.get_word_valid(word)):
+		if !(_word_check.is_word(word)):
 			_rpc_submit_result.rpc_id(player_id, SubmissionResult.INVALID_WORD)
 			return SubmissionResult.INVALID_WORD
 	
