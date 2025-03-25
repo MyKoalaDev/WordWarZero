@@ -1,6 +1,6 @@
 [gd_scene load_steps=2 format=3 uid="uid://di17ysaiamnvl"]
 
-[ext_resource type="Script" uid="uid://c88fv2dfhjjbs" path="res://src/game_lobby_list_entry.gd" id="1_lvnqb"]
+[ext_resource type="Script" uid="uid://c88fv2dfhjjbs" path="res://src/game/game_lobby_list_entry.gd" id="1_lvnqb"]
 
 [node name="game_lobby_list_entry" type="Button"]
 clip_children = 2

@@ -3,13 +3,7 @@
 extends Node
 class_name Network
 
-## MyKoala's wrapper node for multiplayer.
-
-# NOTE: Offline: 127.0.0.1
-# NOTE: Supplied multiplayer.multiplayer_peer must be connecting or connected.
-# NOTE: Currently configured using Web Socket Multiplayer.
-
-const MAX_PLAYERS: int = 100
+## MyKoala's epic node for websocket multiplayer.
 
 const CERTIFICATE_PATH: String = "res://certificate.pem"
 const PRIVATE_KEY_PATH: String = "private_key.pem"
@@ -133,14 +127,11 @@ func stop_server() -> Error:
 ## Returns ERR_ALREADY_IN_USE if a connection is currently active.
 ## Returns ERR_CANT_CREATE if client could not be created.
 ## Returns ERR_CANT_CONNECT if client could not connect.
-func join_server(address: String = "127.0.0.1", port: int = 4000, unsafe: bool = false) -> Error:
+func join_server(address: String = "127.0.0.1", port: int = 4000) -> Error:
 	# Return error if a connection is currently active.
 	if _multiplayer_api.has_multiplayer_peer():
 		push_error("Network (Client) | Failed to join server '%s:%d' (a connection is already active)." % [address, port])
 		return ERR_ALREADY_IN_USE
-	
-	# NOTE: Client certificate is optional.
-	# See: https://github.com/godotengine/godot/blob/master/thirdparty/certs/ca-certificates.crt
 	
 	# Load certificate.
 	var certificate: X509Certificate = X509Certificate.new()
@@ -154,9 +145,8 @@ func join_server(address: String = "127.0.0.1", port: int = 4000, unsafe: bool =
 	else:
 		print("Network (Client) | Loaded certificate.")
 	
-	var offline: bool = (address == "127.0.0.1") || (address == "localhost")
 	var tls_options: TLSOptions
-	if offline || unsafe || !is_instance_valid(certificate):
+	if !is_instance_valid(certificate):
 		print("Network (Client) | Joining server without custom certificate.")
 		tls_options = null
 	else:
@@ -166,9 +156,7 @@ func join_server(address: String = "127.0.0.1", port: int = 4000, unsafe: bool =
 	# Create client and return error.
 	var multiplayer_peer: WebSocketMultiplayerPeer = WebSocketMultiplayerPeer.new()
 	
-	var url: String = "wss://" + address + ":" + str(port)
-	if unsafe || offline || !is_instance_valid(tls_options):
-		url = address + ":" + str(port)
+	var url: String = address + ":" + str(port)
 	var error: Error = multiplayer_peer.create_client(url, tls_options)
 	if error != OK:
 		push_error("Network (Client) | Failed to join server '%s:%d' (could not connect)." % [address, port])

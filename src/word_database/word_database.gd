@@ -1,21 +1,22 @@
 @tool
-extends HTTPRequest
-class_name WordCheck
+extends Node
+class_name WordDatabase
 
-# Reads words from a text file.
-# https://github.com/elasticdog/yawl/tree/master
+# Word Database Resource
+# Reads words from text files on static initialization.
 
+# words.txt source: https://github.com/elasticdog/yawl/tree/master
 const WORDS_PATH: String = "res://assets/words/words.txt"
 
-var _words: Dictionary[String, bool] = {}
+static var _words: Dictionary[String, bool] = {}
 
-func _init() -> void:
+static func _static_init() -> void:
 	if Engine.is_editor_hint():
 		return
 	
 	_words.clear()
 	
-	print("WordCheck | Reading words...")
+	print("WordDatabase | Reading words...")
 	var words_file: FileAccess = FileAccess.open(WORDS_PATH, FileAccess.READ)
 	if !is_instance_valid(words_file) || !words_file.is_open():
 		push_error("WordCheck | Failed to read words.")
@@ -27,7 +28,7 @@ func _init() -> void:
 			_words[word] = true
 	
 	words_file.close()
-	print("WordCheck | Done reading words!")
+	print("WordDatabase | Finished reading words.")
 
-func is_word(word: String) -> bool:
+static func is_word(word: String) -> bool:
 	return _words.has(word)

@@ -1,6 +1,6 @@
 [gd_scene load_steps=3 format=3 uid="uid://cstqcudoy2wth"]
 
-[ext_resource type="Script" uid="uid://ckx7mw4pwh2i5" path="res://src/game_leaderboard_entry.gd" id="1_330xg"]
+[ext_resource type="Script" uid="uid://ckx7mw4pwh2i5" path="res://src/game/game_leaderboard_entry.gd" id="1_330xg"]
 [ext_resource type="Texture2D" uid="uid://crexyi6rn4w80" path="res://assets/trophy.png" id="1_uub6x"]
 
 [node name="game_leaderboard_entry" type="Button"]

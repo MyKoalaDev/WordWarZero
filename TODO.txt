@@ -1,0 +1,30 @@
+Steps to Open Sourcing Libre Tiles game:
+
+Clean up code!
+- use text file for words rather than http requests (DONE)
+
+- clean up network code
+- make host option (if on native platform ONLY)
+- remove default ip address (pass in as argument in builds instead of baked in)
+- simply the multiplayer checks (e.g. authority, if has peer, etc.)
+  - this might involve a Network global node?
+  - only Game will know about the lot of those player data stuff
+  - use signals to communicate up properly
+- rename Tile scene + script to Tile2D
+- do local submission valid check (save rpc)
+- add tile created animation
+- tile retains player(s) who have formed submissions using a tile
+
+tile bag class - tracks tiles, distributes tiles, add and remove tile
+
+
+1. keep authoritative server design using websocket.
+2. for fancy multiplayer effects, maybe a separate multiplayer scene branch using WebRTC. for chat, real time mouse cursor, or something
+
+
+
+
+rethink ready system - should be able to start by anyone
+
+any additional game mechanics to add? kinda wanna mix it up from the scrabble formula
+- 

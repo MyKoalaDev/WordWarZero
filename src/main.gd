@@ -1,14 +1,22 @@
 @tool
 extends Node
 
-# TODO (low priority):
-# add azure functions to boot server?
+# TODO (where I left off)
+# game_submission problem: need to get tile board multiplier data
 
-# TODO:
-# pass args to engine via html
+# TODO: Test passing args in HTML export 
 
-const DEFAULT_SERVER_PORT: int = 43517
-const DEFAULT_SERVER_ADDRESS: String = "wordwarzero.westus2.cloudapp.azure.com"
+# TODO: Server read stdin as commands (OS.read_string_from_stdin())
+# Command ideas:
+# help - lists all commands and their usage
+# list_instances - lists all game instances (ID) and their players (name and ID)
+# list_players - lists all players (name and ID)
+# kick <player_id> - kick a player
+# stop_instance <instance_id> - stops a game instance
+# shutdown - shuts down the server and exits game
+
+const DEFAULT_SERVER_PORT: int = 30666
+const DEFAULT_SERVER_ADDRESS: String = "127.0.0.1"
 
 enum State {
 	SPLASH,
@@ -97,7 +105,7 @@ func _on_game_client_stopped() -> void:
 	_menu_config.set_state(MenuConfig.State.NETWORK)
 
 func _on_menu_config_network_join_request() -> void:
-	_game.start_client(_menu_config.get_network_address(), _menu_config.get_network_port(), _menu_config.get_player_name(), _unsafe)
+	_game.start_client(_menu_config.get_network_address(), _menu_config.get_network_port(), _menu_config.get_player_name())
 
 func _on_menu_config_network_host_request() -> void:
 	_game.start_server(_menu_config.get_network_port(), false)

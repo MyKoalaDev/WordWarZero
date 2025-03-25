@@ -24,9 +24,6 @@ const TILE_HOTBAR_COUNT: int = 7
 const TILE_PACKED_SCENE: PackedScene = preload("res://assets/tile.tscn")
 const TILE_SIZE: Vector2 = Vector2(128.0, 128.0)
 
-@export
-var _game_data: GameData = null
-
 var _game_data_dirty: bool = false
 @onready
 var _tile_board: TileBoard = $"../tile_board" as TileBoard

@@ -1,22 +1,27 @@
 @tool
 extends Node2D
-class_name Tile
+class_name TileInstance2D
+
+# TODO: move this to some tile bag class
+#const FACE_WEIGHTS: PackedFloat32Array = [
+	#2.0, 1.2, 1.2, 1.5,# A B C D
+	#2.0, 0.7, 1.5, 0.7,# E F G H
+	#2.0, 0.3, 0.3, 1.5,# I J K L
+	#1.2, 1.2, 2.0, 1.2,# M N O P
+	#0.1, 2.0, 2.0, 2.0,# Q R S T
+	#2.0, 0.7, 0.7, 0.3,# U V W X
+	#0.7, 0.1,          # Y Z
+#]
+
+#static var _random: RandomNumberGenerator = RandomNumberGenerator.new()
+#
+#static func get_random_face() -> int:
+	#return _random.rand_weighted(FACE_WEIGHTS)
 
 # NOTE: Dummy Physics Engine disables physics object picking.
 
-const FACE_MIN: int = 0
-const FACE_MAX: int = 25
-const FACE_UNICODE_OFFSET: int = 65
-
 const TEXTURE_A: Texture2D = preload("res://assets/tile.png")
 const TEXTURE_B: Texture2D = preload("res://assets/temporary_tile.png")
-
-@export_range(FACE_MIN, FACE_MAX, 1)
-var face: int = 0:
-	get:
-		return face
-	set(value):
-		face = clampi(value, FACE_MIN, FACE_MAX)
 
 var _input_mouse_hovering: bool = false
 
@@ -36,35 +41,13 @@ var _label_face: Label = $display/label_face as Label
 @onready
 var _label_points: Label = $display/label_points as Label
 
-static var _random: RandomNumberGenerator = RandomNumberGenerator.new()
+var _tile: Tile = null
 
-const FACE_POINTS: PackedInt32Array = [
-	01, 03, 03, 02,# A B C D
-	01, 05, 02, 05,# E F G H
-	01, 07, 07, 02,# I J K L
-	03, 03, 01, 03,# M N O P
-	10, 01, 01, 01,# Q R S T
-	01, 05, 05, 07,# U V W X
-	05, 10,        # Y Z
-]
-const FACE_WEIGHTS: PackedFloat32Array = [
-	2.0, 1.2, 1.2, 1.5,# A B C D
-	2.0, 0.7, 1.5, 0.7,# E F G H
-	2.0, 0.3, 0.3, 1.5,# I J K L
-	1.2, 1.2, 2.0, 1.2,# M N O P
-	0.1, 2.0, 2.0, 2.0,# Q R S T
-	2.0, 0.7, 0.7, 0.3,# U V W X
-	0.7, 0.1,          # Y Z
-]
-
-static func get_face_points(tile_face: int) -> int:
-	return FACE_POINTS[tile_face]
-
-static func get_face_string(tile_face: int) -> String:
-	return String.chr(tile_face + FACE_UNICODE_OFFSET)
-
-static func get_random_face() -> int:
-	return _random.rand_weighted(FACE_WEIGHTS)
+func _init(tile: Tile = null) -> void:
+	if !is_instance_valid(tile):
+		_tile = Tile.new()
+	else:
+		_tile = tile
 
 func _ready() -> void:
 	if Engine.is_editor_hint():
@@ -89,8 +72,8 @@ func _process(delta: float) -> void:
 	else:
 		if _sprite.texture != TEXTURE_B:
 			_sprite.texture = TEXTURE_B
-	_label_face.text = get_face_string(face)
-	_label_points.text = str(get_face_points(face))
+	_label_face.text = _tile.get_face_string()
+	_label_points.text = str(_tile.get_face_points())
 
 func _physics_process(delta: float) -> void:
 	if Engine.is_editor_hint():

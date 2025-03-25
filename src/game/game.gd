@@ -2,51 +2,38 @@
 extends Node
 class_name Game
 
-# TODO: lobby also displays results of previous game
-
-# if no --host arg
-# 1. get player name + validation
-# 2. connect to server (if --join, skip prompt)
-# 3. if connected, start game loop
-# 4. else, display connect error and return to prompt
-# 5. on disconnection, display disconnected and return to prompt
-
-# if --host
-# 1. start server
-# 2. if server start successful, start game loop
-# 3. else, print error and exit application
+const GameInstance: = preload("game_instance.gd")
+const GameInstanceBoard: = preload("game_instance_board.gd")
 
 signal client_started()
 signal client_stopped()
 signal server_started()
 signal server_stopped()
 
-signal _client_updated(connected: bool)
-
-enum Mode {
-	NONE,
-	CLIENT,
-	SERVER,
-}
-var _mode: Mode = Mode.NONE
-
-enum State {
-	NONE,
-	LOBBY,
-	PLAY,
-}
-var _state_curr: State = State.NONE
-var _state_prev: State = State.NONE
+const PLAYER_NAME_MAX_LENGTH: int = 16
 
 @onready
 var _network: Network = $network as Network
-
 @onready
-var _game_data: GameData = $game_data as GameData
+var _game_instance_root: Node = $game_instance_root as Node
+
 @onready
 var _game_lobby: GameLobby = $game_lobby/game_lobby as GameLobby
 @onready
 var _game_board: GameBoard = $game_board/game_board as GameBoard
+
+
+var _game_instances: Array[GameInstance] = []
+var _game_instance: GameInstance = null
+
+static func is_valid_player_name(player_name: String) -> bool:
+	if player_name.is_empty():
+		return false
+	if player_name.contains("\n"):
+		return false
+	if player_name.length() > PLAYER_NAME_MAX_LENGTH:
+		return false
+	return true
 
 func _ready() -> void:
 	if Engine.is_editor_hint():
@@ -60,13 +47,14 @@ func _on_multiplayer_peer_connected(player_id: int) -> void:
 		_rpc_set_state.rpc_id(player_id, _state_curr)
 
 func _on_multiplayer_server_disconnected() -> void:
+	
 	_set_state(State.NONE)
 
 func is_active() -> bool:
 	return _mode != Mode.NONE
 
-func start_client(address: String, port: int, player_name: String = "Player", unsafe: bool = false) -> bool:
-	if await _network.join_server(address, port, unsafe) != OK:
+func start_client(address: String, port: int, player_name: String = "Player") -> bool:
+	if await _network.join_server(address, port) != OK:
 		return false
 	
 	_game_data.set_local_player_name(player_name)
