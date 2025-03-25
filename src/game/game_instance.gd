@@ -54,16 +54,12 @@ var _leaderboard_points: PackedInt64Array = PackedInt64Array()
 ## Force synchronize all data with remote player (authority only).
 # TODO: Compress into a single PackedByteArray RPC.
 func force_sync(player_id: int) -> bool:
-	if !multiplayer.has_multiplayer_peer():
-		push_error("GameInstance '<%s>' | Failed to force sync with player ID '%d': multiplayer is not active." % [self.name, player_id])
+	if !is_multiplayer_authority():
+		push_error("GameInstance '<%s>' | Failed to force sync with player ID '%d': only the authority can force sync." % [self.name, player_id])
 		return false
 	
 	if !_players.has(player_id):
 		push_error("GameInstance '<%s>' | Failed to force sync with player ID '%d': player ID does not exist." % [self.name, player_id])
-		return false
-	
-	if !is_multiplayer_authority():
-		push_error("GameInstance '<%s>' | Failed to force sync with player ID '%d': only the authority can force sync." % [self.name, player_id])
 		return false
 	
 	if player_id == multiplayer.get_unique_id():
@@ -77,7 +73,7 @@ func force_sync(player_id: int) -> bool:
 	_rpc_set_turn_timer.rpc_id(player_id, _turn_timer)
 	_rpc_set_turn_timer_max.rpc_id(player_id, _turn_timer_max)
 	
-	_rpc_set_tile_board.rpc_id(player_id, encode_tile_board(_tile_board))
+	_rpc_set_tile_board.rpc_id(player_id, _encode_tile_board(_tile_board))
 	
 	for _player_id: int in _players:
 		var player_data: PlayerData = _players[_player_id]
@@ -94,24 +90,18 @@ func force_sync(player_id: int) -> bool:
 #region Play
 
 func set_play(play: bool) -> bool:
-	if !multiplayer.has_multiplayer_peer():
-		push_error("GameInstance '<%s>' | Failed to set play to '%s': multiplayer is not active." % [self.name, str(play)])
-		return false
-	
-	if _play == play:
-		push_error("GameInstance '<%s>' | Failed to set play to '%s': play already matches." % [self.name, str(play)])
-		return false
-	
 	if !is_multiplayer_authority():
 		push_error("GameInstance '<%s>' | Failed to set play to '%s': only the authority can set play." % [self.name, str(play)])
 		return false
 	
+	if _play == play:
+		return true
+	
 	_play = play
 	
-	# Sync data with all players.
-	for player_id: int in _players:
-		if player_id != multiplayer.get_unique_id():
-			_rpc_set_play.rpc_id(player_id, play)
+	for _player_id: int in _players:
+		if _player_id != multiplayer.get_unique_id():
+			_rpc_set_play.rpc_id(_player_id, play)
 	
 	updated.emit()
 	return true
@@ -127,25 +117,22 @@ func _rpc_set_play(play: bool) -> void:
 
 var _turn_count: int = 0
 
+func get_turn_count() -> int:
+	return _turn_count
+
 func set_turn_count(turn_count: int) -> bool:
-	if !multiplayer.has_multiplayer_peer():
-		push_error("GameInstance '<%s>' | Failed to set turn count to '%d': multiplayer is not active." % [self.name, turn_count])
-		return false
-	
-	if _turn_count == turn_count:
-		push_error("GameInstance '<%s>' | Failed to set turn count to '%d': turn count already matches." % [self.name, turn_count])
-		return false
-	
 	if !is_multiplayer_authority():
 		push_error("GameInstance '<%s>' | Failed to set turn count to '%d': only the authority can set turn count." % [self.name, turn_count])
 		return false
 	
+	if _turn_count == turn_count:
+		return true
+	
 	_turn_count = turn_count
 	
-	# Sync data with all players.
-	for player_id: int in _players:
-		if player_id != multiplayer.get_unique_id():
-			_rpc_set_turn_count.rpc_id(player_id, turn_count)
+	for _player_id: int in _players:
+		if _player_id != multiplayer.get_unique_id():
+			_rpc_set_turn_count.rpc_id(_player_id, turn_count)
 	
 	updated.emit()
 	return true
@@ -158,25 +145,22 @@ func _rpc_set_turn_count(turn_count: int) -> void:
 
 var _turn_count_max: int = DEFAULT_TURN_COUNT
 
+func get_turn_count_max() -> int:
+	return _turn_count_max
+
 func set_turn_count_max(turn_count_max: int) -> bool:
-	if !multiplayer.has_multiplayer_peer():
-		push_error("GameInstance '<%s>' | Failed to set turn count max to '%d': multiplayer is not active." % [self.name, turn_count_max])
-		return false
-	
-	if _turn_count_max == turn_count_max:
-		push_error("GameInstance '<%s>' | Failed to set turn count max to '%d': turn count max already matches." % [self.name, turn_count_max])
-		return false
-	
 	if !is_multiplayer_authority():
 		push_error("GameInstance '<%s>' | Failed to set turn count max to '%d': only the authority can set turn count max." % [self.name, turn_count_max])
 		return false
 	
+	if _turn_count_max == turn_count_max:
+		return true
+	
 	_turn_count_max = turn_count_max
 	
-	# Sync data with all players.
-	for player_id: int in _players:
-		if player_id != multiplayer.get_unique_id():
-			_rpc_set_turn_count_max.rpc_id(player_id, turn_count_max)
+	for _player_id: int in _players:
+		if _player_id != multiplayer.get_unique_id():
+			_rpc_set_turn_count_max.rpc_id(_player_id, turn_count_max)
 	
 	updated.emit()
 	return true
@@ -189,25 +173,22 @@ func _rpc_set_turn_count_max(turn_count_max: int) -> void:
 
 var _turn_timer: float = 0.0
 
+func get_turn_timer() -> float:
+	return _turn_timer
+
 func set_turn_timer(turn_timer: int) -> bool:
-	if !multiplayer.has_multiplayer_peer():
-		push_error("GameInstance '<%s>' | Failed to set turn timer to '%d': multiplayer is not active." % [self.name, turn_timer])
-		return false
-	
-	if _turn_timer == turn_timer:
-		push_error("GameInstance '<%s>' | Failed to set turn timer to '%d': turn timer already matches." % [self.name, turn_timer])
-		return false
-	
 	if !is_multiplayer_authority():
 		push_error("GameInstance '<%s>' | Failed to set turn timer to '%d': only the authority can set turn timer." % [self.name, turn_timer])
 		return false
 	
+	if _turn_timer == turn_timer:
+		return true
+	
 	_turn_timer = turn_timer
 	
-	# Sync data with all players.
-	for player_id: int in _players:
-		if player_id != multiplayer.get_unique_id():
-			_rpc_set_turn_timer.rpc_id(player_id, turn_timer)
+	for _player_id: int in _players:
+		if _player_id != multiplayer.get_unique_id():
+			_rpc_set_turn_timer.rpc_id(_player_id, turn_timer)
 	
 	updated.emit()
 	return true
@@ -218,25 +199,22 @@ func _rpc_set_turn_timer(turn_timer: int) -> void:
 
 var _turn_timer_max: float = DEFAULT_TURN_TIMER
 
+func get_turn_timer_max() -> float:
+	return _turn_timer_max
+
 func set_turn_timer_max(turn_timer_max: int) -> bool:
-	if !multiplayer.has_multiplayer_peer():
-		push_error("GameInstance '<%s>' | Failed to set turn timer max to '%d': multiplayer is not active." % [self.name, turn_timer_max])
-		return false
-	
-	if _turn_timer_max == turn_timer_max:
-		push_error("GameInstance '<%s>' | Failed to set turn timer max to '%d': turn timer max already matches." % [self.name, turn_timer_max])
-		return false
-	
 	if !is_multiplayer_authority():
 		push_error("GameInstance '<%s>' | Failed to set turn timer max to '%d': only the authority can set turn timer max." % [self.name, turn_timer_max])
 		return false
 	
+	if _turn_timer_max == turn_timer_max:
+		return true
+	
 	_turn_timer_max = turn_timer_max
 	
-	# Sync data with all players.
-	for player_id: int in _players:
-		if player_id != multiplayer.get_unique_id():
-			_rpc_set_turn_timer_max.rpc_id(player_id, turn_timer_max)
+	for _player_id: int in _players:
+		if _player_id != multiplayer.get_unique_id():
+			_rpc_set_turn_timer_max.rpc_id(_player_id, turn_timer_max)
 	
 	updated.emit()
 	return true
@@ -250,26 +228,29 @@ func _rpc_set_turn_timer_max(turn_timer_max: int) -> void:
 
 signal tile_board_set()
 signal tile_board_cleared()
-signal tile_board_tile_added(tile_position: Vector2i, tile_data: int)
+signal tile_board_tile_added(tile_position: Vector2i, tile: Tile)
 
 ## Hashmap of tile coordinates to encoded tile data. (These are submitted tiles locked onto the board).
-var _tile_board: Dictionary[Vector2i, int] = {}
+var _tile_board: Dictionary[Vector2i, Tile] = {}
 
-func get_tile_board() -> Dictionary[Vector2i, int]:
-	return _tile_board.duplicate()
+## Returns a read-only duplicate of the tile board.
+func get_tile_board() -> Dictionary[Vector2i, Tile]:
+	var tile_board: Dictionary[Vector2i, Tile] = {}
+	for tile_position: Vector2i in _tile_board:
+		tile_board[tile_position] = _tile_board[tile_position].duplicate()
+	tile_board.make_read_only()
+	return tile_board
 
-func set_tile_board(tile_board: Dictionary[Vector2i, int]) -> bool:
-	if !multiplayer.has_multiplayer_peer():
-		push_error("GameInstance '<%s>' | Failed to set tile board: multiplayer is not active." % [self.name])
-		return false
-	
+func set_tile_board(tile_board: Dictionary[Vector2i, Tile]) -> bool:
 	if !is_multiplayer_authority():
 		push_error("GameInstance '<%s>' | Failed to set tile board: only the authority can set tile board." % [self.name])
 		return false
 	
-	_tile_board = tile_board
+	_tile_board.clear()
+	for tile_position: Vector2i in tile_board:
+		_tile_board[tile_position] = tile_board[tile_position].duplicate()
 	
-	var bytes: PackedByteArray = encode_tile_board(tile_board)
+	var bytes: PackedByteArray = _encode_tile_board(tile_board)
 	for _player_id: int in _players:
 		if _player_id != multiplayer.get_unique_id():
 			_rpc_set_tile_board.rpc_id(_player_id, bytes)
@@ -279,15 +260,11 @@ func set_tile_board(tile_board: Dictionary[Vector2i, int]) -> bool:
 
 @rpc("authority", "call_remote", "reliable", 0)
 func _rpc_set_tile_board(bytes: PackedByteArray) -> void:
-	_tile_board = decode_tile_board(bytes)
+	_tile_board = _decode_tile_board(bytes)
 	
 	tile_board_set.emit()
 
 func clear_tile_board() -> bool:
-	if !multiplayer.has_multiplayer_peer():
-		push_error("GameInstance '<%s>' | Failed to clear tile board: multiplayer is not active." % [self.name])
-		return false
-	
 	if !is_multiplayer_authority():
 		push_error("GameInstance '<%s>' | Failed to clear tile board: only the authority can clear tile board." % [self.name])
 		return false
@@ -307,11 +284,7 @@ func _rpc_clear_tile_board() -> void:
 	
 	tile_board_cleared.emit()
 
-func add_tile_board_tile(tile_position: Vector2i, tile_data: int) -> bool:
-	if !multiplayer.has_multiplayer_peer():
-		push_error("GameInstance '<%s>' | Failed to add tile board tile: multiplayer is not active." % [self.name])
-		return false
-	
+func add_tile_board_tile(tile_position: Vector2i, tile: Tile) -> bool:
 	if !is_multiplayer_authority():
 		push_error("GameInstance '<%s>' | Failed to add tile board tile: only the authority can add tile board tile." % [self.name])
 		return false
@@ -320,52 +293,26 @@ func add_tile_board_tile(tile_position: Vector2i, tile_data: int) -> bool:
 		push_error("GameInstance '<%s>' | Failed to add tile board tile: a tile already exists at (%d, %d)." % [self.name, tile_position.x, tile_position.y])
 		return false
 	
-	_tile_board[tile_position] = tile_data
+	_tile_board[tile_position] = tile.duplicate()
 	
 	var bytes: PackedByteArray = PackedByteArray()
-	bytes.resize(5)
+	bytes.encode_s16(0, tile_position.x)
+	bytes.encode_s16(2, tile_position.y)
+	bytes.encode_u8(4, _encode_tile(tile))
 	for _player_id: int in _players:
 		if _player_id != multiplayer.get_unique_id():
-			_rpc_add_tile_board_tile(bytes)
+			_rpc_add_tile_board_tile.rpc_id(_player_id, bytes)
 	
-	tile_board_tile_added.emit(tile_position, tile_data)
+	tile_board_tile_added.emit(tile_position, _tile_board[tile_position])
 	return true
 
 @rpc("authority", "call_remote", "reliable", 0)
 func _rpc_add_tile_board_tile(bytes: PackedByteArray) -> void:
 	var tile_position: Vector2i = Vector2i(bytes.decode_s16(0), bytes.decode_s16(2))
-	var tile_data: int = bytes.decode_u8(4)
-	_tile_board[tile_position] = tile_data
+	var tile: Tile = _decode_tile(bytes.decode_u8(4))
+	_tile_board[tile_position] = tile
 	
-	tile_board_tile_added.emit(tile_position, tile_data)
-
-# NOTE: TileMap coordinates are limited to 16 bit signed integers.
-# tile position x: 2 bytes (16 bit signed int)
-# tile position y: 2 bytes (16 bit signed int)
-# tile face: 1 byte (8 bit unsigned int)
-static func encode_tile_board(tile_board: Dictionary[Vector2i, int]) -> PackedByteArray:
-	var bytes: PackedByteArray = PackedByteArray()
-	bytes.resize(tile_board.size() * 5)
-	var index: int = 0
-	for tile_position: Vector2i in tile_board:
-		bytes.encode_s16(index + 0, tile_position.x)
-		bytes.encode_s16(index + 2, tile_position.y)
-		bytes.encode_u8(index + 4, tile_board[tile_position])
-		index += 5
-	return bytes
-
-static func decode_tile_board(bytes: PackedByteArray) -> Dictionary[Vector2i, int]:
-	if bytes.size() % 5 != 0:
-		return {}
-	
-	var tile_board: Dictionary[Vector2i, int] = {}
-	var index: int = 0
-	while index < bytes.size():
-		var tile_position: Vector2i = Vector2i(bytes.decode_s16(index + 0), bytes.decode_s16(index + 2))
-		var tile_data: int = bytes.decode_u8(index + 4)
-		tile_board[tile_position] = tile_data
-		index += 5
-	return tile_board
+	tile_board_tile_added.emit(tile_position, tile)
 
 #endregion
 #region Player
@@ -382,16 +329,12 @@ func has_player_id(player_id: int) -> bool:
 	return _players.has(player_id)
 
 func add_player_id(player_id: int) -> bool:
-	if !multiplayer.has_multiplayer_peer():
-		push_error("GameInstance '<%s>' | Failed to add player ID '%d': multiplayer is not active." % [self.name, player_id])
+	if !is_multiplayer_authority():
+		push_error("GameInstance '<%s>' | Failed to add player ID '%d': only the authority can add player ID." % [self.name, player_id])
 		return false
 	
 	if _players.has(player_id):
 		push_error("GameInstance '<%s>' | Failed to add player ID '%d': player ID already exists." % [self.name, player_id])
-		return false
-	
-	if !is_multiplayer_authority():
-		push_error("GameInstance '<%s>' | Failed to add player ID '%d': only the authority can add player ID." % [self.name, player_id])
 		return false
 	
 	_players[player_id] = PlayerData.new()
@@ -411,16 +354,12 @@ func _rpc_add_player_id(player_id: int) -> void:
 	updated.emit()
 
 func remove_player_id(player_id: int) -> bool:
-	if !multiplayer.has_multiplayer_peer():
-		push_error("GameInstance '<%s>' | Failed to remove player ID '%d': multiplayer is not active." % [self.name, player_id])
+	if !is_multiplayer_authority():
+		push_error("GameInstance '<%s>' | Failed to remove player ID '%d': only the authority can remove player ID." % [self.name, player_id])
 		return false
 	
 	if !_players.has(player_id):
 		push_error("GameInstance '<%s>' | Failed to remove player ID '%d': player ID does not exist." % [self.name, player_id])
-		return false
-	
-	if !is_multiplayer_authority():
-		push_error("GameInstance '<%s>' | Failed to remove player ID '%d': only the authority can remove player ID." % [self.name, player_id])
 		return false
 	
 	_players.erase(player_id)
@@ -434,25 +373,14 @@ func remove_player_id(player_id: int) -> bool:
 
 @rpc("authority", "call_remote", "reliable", 0)
 func _rpc_remove_player_id(player_id: int) -> void:
-	if _players.has(player_id):
-		_players.erase(player_id)
+	_players.erase(player_id)
 	
 	updated.emit()
 
 #endregion
 #region Player Name
 
-func get_local_player_name() -> String:
-	return get_player_name(multiplayer.get_unique_id())
-
-func set_local_player_name(player_name: String) -> void:
-	set_player_name(multiplayer.get_unique_id(), player_name)
-
 func get_player_name(player_id: int) -> String:
-	if !multiplayer.has_multiplayer_peer():
-		push_error("GameInstance '<%s>' | Failed to get player name for player ID '%d': multiplayer is not active." % [self.name, player_id])
-		return ""
-	
 	if !_players.has(player_id):
 		push_error("GameInstance '<%s>' | Failed to get player name for player ID '%d': could not find player ID." % [self.name, player_id])
 		return ""
@@ -460,8 +388,8 @@ func get_player_name(player_id: int) -> String:
 	return _players[player_id].name
 
 func set_player_name(player_id: int, player_name: String) -> bool:
-	if !multiplayer.has_multiplayer_peer():
-		push_error("GameInstance '<%s>' | Failed to set player name to '%s' for player ID '%d': multiplayer is not active." % [self.name, player_name, player_id])
+	if !is_multiplayer_authority() && (player_id != multiplayer.get_unique_id()):
+		push_error("GameInstance '<%s>' | Failed to set player name to '%s' for player ID '%d': only the authority can set remote player name." % [self.name, player_name, player_id])
 		return false
 	
 	if !_players.has(player_id):
@@ -469,24 +397,18 @@ func set_player_name(player_id: int, player_name: String) -> bool:
 		return false
 	
 	if _players[player_id].name == player_name:
-		push_error("GameInstance '<%s>' | Failed to set player name to '%s' for player ID '%d': player name already matches." % [self.name, player_name, player_id])
-		return false
+		return true
 	
 	if !Game.is_valid_player_name(player_name):
 		push_error("GameInstance '<%s>' | Failed to set player name to '%s' for player ID '%d': player name is not valid." % [self.name, player_name, player_id])
 		return false
 	
 	if !is_multiplayer_authority():
-		if player_id != multiplayer.get_unique_id():
-			push_error("GameInstance '<%s>' | Failed to set player name to '%s' for player ID '%d': only the authority can set remote player name." % [self.name, player_name, player_id])
-			return false
-		
-		_rpc_request_set_local_player_name.rpc_id(get_multiplayer_authority(), player_name)
+		_rpc_request_set_player_name.rpc_id(get_multiplayer_authority(), player_name)
 		return true
 	
 	_players[player_id].name = player_name
 	
-	# Sync data with all players.
 	for _player_id: int in _players:
 		if _player_id != multiplayer.get_unique_id():
 			_rpc_set_player_name.rpc_id(_player_id, player_name)
@@ -496,13 +418,12 @@ func set_player_name(player_id: int, player_name: String) -> bool:
 
 @rpc("authority", "call_remote", "reliable", 0)
 func _rpc_set_player_name(player_id: int, player_name: String) -> void:
-	if _players.has(player_id):
-		_players[player_id].name = player_name
+	_players[player_id].name = player_name
 	
 	updated.emit()
 
 @rpc("any_peer", "call_remote", "reliable", 0)
-func _rpc_request_set_local_player_name(player_name: String) -> void:
+func _rpc_request_set_player_name(player_name: String) -> void:
 	var player_id: int = multiplayer.get_remote_sender_id()
 	if is_multiplayer_authority():
 		set_player_name(player_id, player_name)
@@ -511,55 +432,36 @@ func _rpc_request_set_local_player_name(player_name: String) -> void:
 #region Player Ready
 
 func get_all_players_ready() -> bool:
-	if !multiplayer.has_multiplayer_peer():
-		push_error("GameInstance '<%s>' | Failed to get all players ready: multiplayer is not active." % [self.name])
-		return false
-	
 	if _players.is_empty():
 		return false
 	
-	for player_id: int in _players:
-		if !_players[player_id].spectator && !_players[player_id].ready:
+	for _player_id: int in _players:
+		if !_players[_player_id].spectator && !_players[_player_id].ready:
 			return false
 	
 	return true
 
 func set_all_players_ready(player_ready: bool) -> bool:
-	if !multiplayer.has_multiplayer_peer():
-		push_error("GameInstance '<%s>' | Failed to set all players ready to '%s': multiplayer is not active." % [self.name, str(player_ready)])
-		return false
-	
 	if !is_multiplayer_authority():
 		push_error("GameInstance '<%s>' | Failed to set all players ready to '%s': only the authority can set all players ready." % [self.name, str(player_ready)])
 		return false
 	
-	for player_id: int in _players:
-		_players[player_id].ready = player_ready
-	
-	for player_id: int in _players:
-		_rpc_set_all_players_ready.rpc_id(player_id, player_ready)
+	for _player_id: int in _players:
+		_players[_player_id].ready = player_ready
+		if _player_id != multiplayer.get_unique_id():
+			_rpc_set_all_players_ready.rpc_id(_player_id, player_ready)
 	
 	updated.emit()
 	return true
 
 @rpc("authority", "call_remote", "reliable", 0)
 func _rpc_set_all_players_ready(player_ready: bool) -> void:
-	for player_id: int in _players:
-		_players[player_id].ready = player_ready
+	for _player_id: int in _players:
+		_players[_player_id].ready = player_ready
 	
 	updated.emit()
 
-func get_local_player_ready() -> bool:
-	return get_player_ready(multiplayer.get_unique_id())
-
-func set_local_player_ready(player_ready: bool) -> void:
-	set_player_ready(multiplayer.get_unique_id(), player_ready)
-
 func get_player_ready(player_id: int) -> bool:
-	if !multiplayer.has_multiplayer_peer():
-		push_error("GameInstance '<%s>' | Failed to get player ready for player ID '%d': multiplayer is not active." % [self.name,player_id])
-		return false
-	
 	if !_players.has(player_id):
 		push_error("GameInstance '<%s>' | Failed to get player ready for player ID '%d': could not find player ID." % [self.name, player_id])
 		return false
@@ -567,8 +469,8 @@ func get_player_ready(player_id: int) -> bool:
 	return _players[player_id].ready
 
 func set_player_ready(player_id: int, player_ready: bool) -> bool:
-	if !multiplayer.has_multiplayer_peer():
-		push_error("GameInstance '<%s>' | Failed to set player ready to '%s' for player ID '%d': multiplayer is not active." % [self.name, player_ready, player_id])
+	if !is_multiplayer_authority() && (player_id != multiplayer.get_unique_id()):
+		push_error("GameInstance '<%s>' | Failed to set player ready to '%s' for player ID '%d': only the authority can set remote player ready." % [self.name, player_ready, player_id])
 		return false
 	
 	if !_players.has(player_id):
@@ -576,14 +478,9 @@ func set_player_ready(player_id: int, player_ready: bool) -> bool:
 		return false
 	
 	if _players[player_id].ready == player_ready:
-		push_error("GameInstance '<%s>' | Failed to set player ready to '%s' for player ID '%d': player ready already matches." % [self.name, player_ready, player_id])
-		return false
+		return true
 	
 	if !is_multiplayer_authority():
-		if player_id != multiplayer.get_unique_id():
-			push_error("GameInstance '<%s>' | Failed to set player ready to '%s' for player ID '%d': only the authority can set remote player ready." % [self.name, player_ready, player_id])
-			return false
-		
 		_rpc_request_set_local_player_ready.rpc_id(get_multiplayer_authority(), player_ready)
 		return true
 	
@@ -597,8 +494,7 @@ func set_player_ready(player_id: int, player_ready: bool) -> bool:
 
 @rpc("authority", "call_remote", "reliable", 0)
 func _rpc_set_player_ready(player_id: int, player_ready: bool) -> void:
-	if _players.has(player_id):
-		_players[player_id].ready = player_ready
+	_players[player_id].ready = player_ready
 	
 	updated.emit()
 
@@ -611,17 +507,7 @@ func _rpc_request_set_local_player_ready(player_ready: bool) -> void:
 #endregion
 #region Player Spectator
 
-func get_local_player_spectator() -> bool:
-	return get_player_spectator(multiplayer.get_unique_id())
-
-func set_local_player_spectator(player_spectator: bool) -> void:
-	set_player_spectator(multiplayer.get_unique_id(), player_spectator)
-
 func get_player_spectator(player_id: int) -> bool:
-	if !multiplayer.has_multiplayer_peer():
-		push_error("GameInstance '<%s>' | Failed to get player spectator for player ID '%d': multiplayer is not active." % [self.name,player_id])
-		return false
-	
 	if !_players.has(player_id):
 		push_error("GameInstance '<%s>' | Failed to get player spectator for player ID '%d': could not find player ID." % [self.name, player_id])
 		return false
@@ -629,8 +515,8 @@ func get_player_spectator(player_id: int) -> bool:
 	return _players[player_id].spectator
 
 func set_player_spectator(player_id: int, player_spectator: bool) -> bool:
-	if !multiplayer.has_multiplayer_peer():
-		push_error("GameInstance '<%s>' | Failed to set player spectator to '%s' for player ID '%d': multiplayer is not active." % [self.name, player_spectator, player_id])
+	if !is_multiplayer_authority() && player_id != multiplayer.get_unique_id():
+		push_error("GameInstance '<%s>' | Failed to set player spectator to '%s' for player ID '%d': only the authority can set remote player spectator." % [self.name, player_spectator, player_id])
 		return false
 	
 	if !_players.has(player_id):
@@ -638,34 +524,29 @@ func set_player_spectator(player_id: int, player_spectator: bool) -> bool:
 		return false
 	
 	if _players[player_id].spectator == player_spectator:
-		push_error("GameInstance '<%s>' | Failed to set player spectator to '%s' for player ID '%d': player spectator already matches." % [self.name, player_spectator, player_id])
-		return false
+		return true
 	
 	if !is_multiplayer_authority():
-		if player_id != multiplayer.get_unique_id():
-			push_error("GameInstance '<%s>' | Failed to set player spectator to '%s' for player ID '%d': only the authority can set remote player spectator." % [self.name, player_spectator, player_id])
-			return false
-		
-		_rpc_request_set_local_player_spectator.rpc_id(get_multiplayer_authority(), player_spectator)
+		_rpc_request_set_player_spectator.rpc_id(get_multiplayer_authority(), player_spectator)
 		return true
 	
 	_players[player_id].spectator = player_spectator
+	
 	for _player_id: int in _players:
 		if _player_id != multiplayer.get_unique_id():
-			_rpc_set_player_spectator.rpc_id(_player_id, player_spectator)
+			_rpc_set_player_spectator.rpc_id(_player_id, player_id, player_spectator)
 	
 	updated.emit()
 	return true
 
 @rpc("authority", "call_remote", "reliable", 0)
 func _rpc_set_player_spectator(player_id: int, player_spectator: bool) -> void:
-	if _players.has(player_id):
-		_players[player_id].spectator = player_spectator
+	_players[player_id].spectator = player_spectator
 	
 	updated.emit()
 
 @rpc("any_peer", "call_remote", "reliable", 0)
-func _rpc_request_set_local_player_spectator(player_spectator: bool) -> void:
+func _rpc_request_set_player_spectator(player_spectator: bool) -> void:
 	var player_id: int = multiplayer.get_remote_sender_id()
 	if is_multiplayer_authority():
 		set_player_spectator(player_id, player_spectator)
@@ -674,55 +555,36 @@ func _rpc_request_set_local_player_spectator(player_spectator: bool) -> void:
 #region Player Submitted
 
 func get_all_players_submitted() -> bool:
-	if !multiplayer.has_multiplayer_peer():
-		push_error("GameInstance '<%s>' | Failed to get all players submitted: multiplayer is not active." % [self.name])
-		return false
-	
 	if _players.is_empty():
 		return false
 	
-	for player_id: int in _players:
-		if !_players[player_id].spectator && !_players[player_id].submitted:
+	for _player_id: int in _players:
+		if !_players[_player_id].spectator && !_players[_player_id].submitted:
 			return false
 	
 	return true
 
-func set_all_players_submitted(player_submitted: bool) -> bool:
-	if !multiplayer.has_multiplayer_peer():
-		push_error("GameInstance '<%s>' | Failed to set all players submitted to '%s': multiplayer is not active." % [self.name, str(player_submitted)])
-		return false
-	
+func clear_all_players_submitted() -> bool:
 	if !is_multiplayer_authority():
-		push_error("GameInstance '<%s>' | Failed to set all players submitted to '%s': only the authority can set all players submitted." % [self.name, str(player_submitted)])
+		push_error("GameInstance '<%s>' | Failed to clear all players submitted: only the authority can clear all players submitted." % [self.name])
 		return false
 	
-	for player_id: int in _players:
-		_players[player_id].submitted = player_submitted
-	
-	for player_id: int in _players:
-		_rpc_set_all_players_submitted.rpc_id(player_id, player_submitted)
+	for _player_id: int in _players:
+		_players[_player_id].submitted = false
+		if _player_id != multiplayer.get_unique_id():
+			_rpc_clear_all_players_submitted.rpc_id(_player_id)
 	
 	updated.emit()
 	return true
 
 @rpc("authority", "call_remote", "reliable", 0)
-func _rpc_set_all_players_submitted(player_submitted: bool) -> void:
-	for player_id: int in _players:
-		_players[player_id].submitted = player_submitted
+func _rpc_clear_all_players_submitted() -> void:
+	for _player_id: int in _players:
+		_players[_player_id].submitted = false
 	
 	updated.emit()
 
-func get_local_player_submitted() -> bool:
-	return get_player_submitted(multiplayer.get_unique_id())
-
-func set_local_player_submitted(player_submitted: bool) -> void:
-	set_player_submitted(multiplayer.get_unique_id(), player_submitted)
-
 func get_player_submitted(player_id: int) -> bool:
-	if !multiplayer.has_multiplayer_peer():
-		push_error("GameInstance '<%s>' | Failed to get player submitted for player ID '%d': multiplayer is not active." % [self.name,player_id])
-		return false
-	
 	if !_players.has(player_id):
 		push_error("GameInstance '<%s>' | Failed to get player submitted for player ID '%d': could not find player ID." % [self.name, player_id])
 		return false
@@ -730,8 +592,8 @@ func get_player_submitted(player_id: int) -> bool:
 	return _players[player_id].submitted
 
 func set_player_submitted(player_id: int, player_submitted: bool) -> bool:
-	if !multiplayer.has_multiplayer_peer():
-		push_error("GameInstance '<%s>' | Failed to set player submitted to '%s' for player ID '%d': multiplayer is not active." % [self.name, player_submitted, player_id])
+	if !is_multiplayer_authority():
+		push_error("GameInstance '<%s>' | Failed to set player submitted to '%s' for player ID '%d': only the authority can set remote player submitted." % [self.name, player_submitted, player_id])
 		return false
 	
 	if !_players.has(player_id):
@@ -739,76 +601,47 @@ func set_player_submitted(player_id: int, player_submitted: bool) -> bool:
 		return false
 	
 	if _players[player_id].submitted == player_submitted:
-		push_error("GameInstance '<%s>' | Failed to set player submitted to '%s' for player ID '%d': player submitted already matches." % [self.name, player_submitted, player_id])
-		return false
-	
-	if !is_multiplayer_authority():
-		if player_id != multiplayer.get_unique_id():
-			push_error("GameInstance '<%s>' | Failed to set player submitted to '%s' for player ID '%d': only the authority can set remote player submitted." % [self.name, player_submitted, player_id])
-			return false
-		
-		_rpc_request_set_local_player_submitted.rpc_id(get_multiplayer_authority(), player_submitted)
 		return true
 	
 	_players[player_id].submitted = player_submitted
 	
-	# Sync new data with all players.
 	for _player_id: int in _players:
 		if _player_id != multiplayer.get_unique_id():
-			_rpc_set_player_submitted.rpc_id(_player_id, player_submitted)
+			_rpc_set_player_submitted.rpc_id(_player_id, player_id, player_submitted)
 	
 	updated.emit()
 	return true
 
 @rpc("authority", "call_remote", "reliable", 0)
 func _rpc_set_player_submitted(player_id: int, player_submitted: bool) -> void:
-	if _players.has(player_id):
-		_players[player_id].submitted = player_submitted
+	_players[player_id].submitted = player_submitted
 	
 	updated.emit()
-
-@rpc("any_peer", "call_remote", "reliable", 0)
-func _rpc_request_set_local_player_submitted(player_submitted: bool) -> void:
-	var player_id: int = multiplayer.get_remote_sender_id()
-	if is_multiplayer_authority():
-		set_player_submitted(player_id, player_submitted)
 
 #endregion
 #region Player Tiles
 
 func clear_all_players_tiles() -> bool:
-	if !multiplayer.has_multiplayer_peer():
-		push_error("GameInstance '<%s>' | Failed to clear all players tiles: multiplayer is not active." % [self.name])
-		return false
-	
 	if !is_multiplayer_authority():
 		push_error("GameInstance '<%s>' | Failed to clear all players tiles: only the authority can clear all players tiles." % [self.name])
 		return false
 	
-	for player_id: int in _players:
-		_players[player_id].tiles.clear()
-	
-	for player_id: int in _players:
-		_rpc_clear_all_players_tiles.rpc_id(player_id)
+	for _player_id: int in _players:
+		_players[_player_id].tiles.clear()
+		if _player_id != multiplayer.get_unique_id():
+			_rpc_clear_all_players_tiles.rpc_id(_player_id)
 	
 	updated.emit()
 	return true
 
 @rpc("authority", "call_remote", "reliable", 0)
 func _rpc_clear_all_players_tiles() -> void:
-	for player_id: int in _players:
-		_players[player_id].tiles.clear()
+	for _player_id: int in _players:
+		_players[_player_id].tiles.clear()
 	
 	updated.emit()
 
-func get_local_player_tiles() -> PackedByteArray:
-	return get_player_tiles(multiplayer.get_unique_id())
-
 func get_player_tiles(player_id: int) -> Array[Tile]:
-	if !multiplayer.has_multiplayer_peer():
-		push_error("GameInstance '<%s>' | Failed to get player tiles for player ID '%d': multiplayer is not active." % [self.name,player_id])
-		return []
-	
 	if !_players.has(player_id):
 		push_error("GameInstance '<%s>' | Failed to get player tiles for player ID '%d': could not find player ID." % [self.name, player_id])
 		return []
@@ -818,94 +651,54 @@ func get_player_tiles(player_id: int) -> Array[Tile]:
 		tiles.append(Tile.new(tile.get_face(), tile.is_wild()))
 	return tiles
 
-func set_player_tiles(player_id: int, player_tiles: PackedByteArray) -> bool:
-	if !multiplayer.has_multiplayer_peer():
-		push_error("GameInstance '<%s>' | Failed to set player tiles to '%s' for player ID '%d': multiplayer is not active." % [self.name, str(player_tiles), player_id])
+func set_player_tiles(player_id: int, player_tiles: Array[Tile]) -> bool:
+	if !is_multiplayer_authority():
+		push_error("GameInstance '<%s>' | Failed to set player tiles to '%s' for player ID '%d': only the authority can set player tiles." % [self.name, str(player_tiles), player_id])
 		return false
 	
 	if !_players.has(player_id):
 		push_error("GameInstance '<%s>' | Failed to set player tiles to '%s' for player ID '%d': could not find player ID." % [self.name, str(player_tiles), player_id])
 		return false
 	
-	if _players[player_id].tiles == player_tiles:
-		push_error("GameInstance '<%s>' | Failed to set player tiles to '%s' for player ID '%d': player tiles already matches." % [self.name, str(player_tiles), player_id])
-		return false
-	
-	if !is_multiplayer_authority():
-		push_error("GameInstance '<%s>' | Failed to set player tiles to '%s' for player ID '%d': only the authority can set player tiles." % [self.name, str(player_tiles), player_id])
-		return false
-	
 	_players[player_id].tiles = player_tiles
 	
-	# Sync data with only the tiles owner.
+	# Sync with only the tiles owner.
 	if player_id != multiplayer.get_unique_id():
-		_rpc_set_player_tiles.rpc_id(player_id, player_id, player_tiles)
+		_rpc_set_player_tiles.rpc_id(player_id, player_id, _encode_tiles(player_tiles))
 	
 	updated.emit()
 	return true
 
 @rpc("authority", "call_remote", "reliable", 0)
-func _rpc_set_player_tiles(player_id: int, player_tiles: PackedByteArray) -> void:
-	if _players.has(player_id):
-		_players[player_id].tiles = player_tiles
+func _rpc_set_player_tiles(player_id: int, bytes: PackedByteArray) -> void:
+	_players[player_id].tiles = _decode_tiles(bytes)
 	
 	updated.emit()
-
-# TODO: move encoding and decoding to Game
-#func get_player_tiles(player_id: int) -> Array[int]:
-	#var player: Player = _get_player(player_id)
-	#if is_instance_valid(player):
-		#var player_tiles: Array[int] = []
-		#for index: int in player.tiles.size():
-			#player_tiles.append(player.tiles.decode_u8(index))
-		#return player_tiles
-	#return []
-#
-#func set_player_tiles(player_id: int, player_tiles: Array[int]) -> void:
-	#if multiplayer.has_multiplayer_peer():
-		#if is_multiplayer_authority():
-			#var bytes: PackedByteArray = PackedByteArray()
-			#bytes.resize(player_tiles.size())
-			#for index: int in player_tiles.size():
-				#bytes.encode_u8(index, player_tiles[index])
-			#_set_player_tiles(player_id, bytes)
 
 #endregion
 #region Player Points
 
 func clear_all_players_points() -> bool:
-	if !multiplayer.has_multiplayer_peer():
-		push_error("GameInstance '<%s>' | Failed to clear all players points: multiplayer is not active." % [self.name])
-		return false
-	
 	if !is_multiplayer_authority():
 		push_error("GameInstance '<%s>' | Failed to clear all players points: only the authority can clear all players points." % [self.name])
 		return false
 	
-	for player_id: int in _players:
-		_players[player_id].points = 0
-	
-	for player_id: int in _players:
-		_rpc_clear_all_players_points.rpc_id(player_id)
+	for _player_id: int in _players:
+		_players[_player_id].points = 0
+		if _player_id != multiplayer.get_unique_id():
+			_rpc_clear_all_players_points.rpc_id(_player_id)
 	
 	updated.emit()
 	return true
 
 @rpc("authority", "call_remote", "reliable", 0)
 func _rpc_clear_all_players_points() -> void:
-	for player_id: int in _players:
-		_players[player_id].points = 0
+	for _player_id: int in _players:
+		_players[_player_id].points = 0
 	
 	updated.emit()
 
-func get_local_player_points() -> int:
-	return get_player_points(multiplayer.get_unique_id())
-
 func get_player_points(player_id: int) -> int:
-	if !multiplayer.has_multiplayer_peer():
-		push_error("GameInstance '<%s>' | Failed to get player points for player ID '%d': multiplayer is not active." % [self.name,player_id])
-		return -1
-	
 	if !_players.has(player_id):
 		push_error("GameInstance '<%s>' | Failed to get player points for player ID '%d': could not find player ID." % [self.name, player_id])
 		return -1
@@ -913,8 +706,8 @@ func get_player_points(player_id: int) -> int:
 	return _players[player_id].points
 
 func set_player_points(player_id: int, player_points: int) -> bool:
-	if !multiplayer.has_multiplayer_peer():
-		push_error("GameInstance '<%s>' | Failed to set player points to '%s' for player ID '%d': multiplayer is not active." % [self.name, str(player_points), player_id])
+	if !is_multiplayer_authority():
+		push_error("GameInstance '<%s>' | Failed to set player points to '%s' for player ID '%d': only the authority can set player points." % [self.name, str(player_points), player_id])
 		return false
 	
 	if !_players.has(player_id):
@@ -922,16 +715,10 @@ func set_player_points(player_id: int, player_points: int) -> bool:
 		return false
 	
 	if _players[player_id].points == player_points:
-		push_error("GameInstance '<%s>' | Failed to set player points to '%s' for player ID '%d': player points already matches." % [self.name, str(player_points), player_id])
-		return false
-	
-	if !is_multiplayer_authority():
-		push_error("GameInstance '<%s>' | Failed to set player points to '%s' for player ID '%d': only the authority can set player points." % [self.name, str(player_points), player_id])
-		return false
+		return true
 	
 	_players[player_id].points = player_points
 	
-	# Sync data with all players.
 	for _player_id: int in _players:
 		if _player_id != multiplayer.get_unique_id():
 			_rpc_set_player_points.rpc_id(_player_id, player_points)
@@ -950,10 +737,6 @@ func _rpc_set_player_points(player_id: int, player_points: int) -> void:
 #region Player Place
 
 func get_player_place(player_id: int) -> int:
-	if !multiplayer.has_multiplayer_peer():
-		push_error("GameInstance '<%s>' | Failed to get player place for player ID '%d': multiplayer is not active." % [self.name,player_id])
-		return -1
-	
 	if !_players.has(player_id):
 		push_error("GameInstance '<%s>' | Failed to get player place for player ID '%d': could not find player ID." % [self.name, player_id])
 		return -1
@@ -1033,11 +816,69 @@ func _physics_process(delta: float) -> void:
 					# Prepare next turn.
 					set_turn_count(_turn_count + 1)
 					set_turn_timer(_turn_timer_max)
-					set_all_players_submitted(false)
+					clear_all_players_submitted()
 				else:
 					# Reset data and stop play loop.
 					# TODO: Bake leaderboard. _leaderboard_names _leaderboard_points
 					clear_all_players_tiles()
 					set_all_players_ready(false)
-					set_all_players_submitted(false)
+					clear_all_players_submitted()
 					set_play(false)
+
+#region Byte Encoding/Decoding
+
+func _encode_tile(tile: Tile) -> int:
+	var byte: int = 0
+	if tile.is_wild():
+		byte |= 1 << 7
+	byte |= tile.get_face()
+	return byte
+
+func _decode_tile(byte: int) -> Tile:
+	return Tile.new(byte & ~(1 << 7), byte & (1 << 7))
+
+## Encode tiles to a byte array.
+## Right most bits of a byte indicate face.
+## Left most bit of a byte indicates wild.
+func _encode_tiles(tiles: Array[Tile]) -> PackedByteArray:
+	var bytes: PackedByteArray = PackedByteArray()
+	bytes.resize(tiles.size())
+	for index: int in tiles.size():
+		bytes[index] = _encode_tile(tiles[index])
+	return bytes
+
+## Decode tile from a byte.
+func _decode_tiles(bytes: PackedByteArray) -> Array[Tile]:
+	var tiles: Array[Tile] = []
+	for index: int in bytes.size():
+		tiles.append(_decode_tile(bytes[index]))
+	return tiles
+
+# NOTE: TileMap coordinates are limited to 16 bit signed integers.
+# tile position x: 2 bytes (16 bit signed int)
+# tile position y: 2 bytes (16 bit signed int)
+# tile face: 1 byte (8 bit unsigned int)
+func _encode_tile_board(tile_board: Dictionary[Vector2i, Tile]) -> PackedByteArray:
+	var bytes: PackedByteArray = PackedByteArray()
+	bytes.resize(tile_board.size() * 5)
+	var index: int = 0
+	for tile_position: Vector2i in tile_board:
+		bytes.encode_s16(index + 0, tile_position.x)
+		bytes.encode_s16(index + 2, tile_position.y)
+		bytes.encode_u8(index + 4, _encode_tile(tile_board[tile_position]))
+		index += 5
+	return bytes
+
+func _decode_tile_board(bytes: PackedByteArray) -> Dictionary[Vector2i, Tile]:
+	if bytes.size() % 5 != 0:
+		return {}
+	
+	var tile_board: Dictionary[Vector2i, Tile] = {}
+	var index: int = 0
+	while index < bytes.size():
+		var tile_position: Vector2i = Vector2i(bytes.decode_s16(index + 0), bytes.decode_s16(index + 2))
+		tile_board[tile_position] = _decode_tile(bytes.decode_u8(index + 4))
+		index += 5
+	return tile_board
+
+#endregion

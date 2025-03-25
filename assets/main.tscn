@@ -38,10 +38,6 @@ metadata/_custom_type_script = "uid://b3eo1vdw04anx"
 [node name="game_instance" type="Node" parent="game/root"]
 script = ExtResource("3_h4xlo")
 
-[node name="players" type="Node" parent="game/root/game_instance"]
-
-[node name="board" type="Node" parent="game/root/game_instance"]
-
 [node name="game_wait" type="CanvasLayer" parent="game"]
 layer = 16
 

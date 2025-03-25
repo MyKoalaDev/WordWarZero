@@ -93,23 +93,5 @@ func _init(face: Face = Face.NONE, wild: bool = false) -> void:
 	_face = face
 	_wild = wild
 
-## Encode tile information to a byte.
-## Right most bits indicate face.
-## Left most bit indicates wild.
-static func encode(tile: Tile) -> int:
-	var byte: int = tile._face
-	if tile._wild:
-		byte |= BIT_WILD
-	return byte
-
-## Decode tile from a byte.
-static func decode(byte: int) -> Tile:
-	return Tile.new(decode_face(byte), decode_wild(byte))
-
-## Decode tile face from a byte.
-static func decode_face(byte: int) -> Face:
-	return byte & ~BIT_WILD
-
-## Decode tile wild from a byte.
-static func decode_wild(byte: int) -> bool:
-	return (byte & BIT_WILD) > 0
+func duplicate() -> Tile:
+	return Tile.new(_face, _wild)
