@@ -1,15 +1,14 @@
 @tool
 extends Node
 
-# Node created upon hosting or joining a game server. Represents all the state of a single game.
-# This node will have a unique scene tree name synced across clients (most likely a game instance id integer).
-# Stores all important information for a game (player and board data).
+# Node that stores and synchronizes all data relevant to a single game instance.
+# This is done to minimize processing on the server.
+# Server instantiates multiple game instances for each player-created lobby.
+# Each player only instantiates the one game instance they've joined.
 
 # TODO:
-# where are submissions processed?
-# game_instance should retain all game related data (since server will instantiate multiple GameInstance for each game)
-# must store board tiles here too
-# need rpcs for clearing tiles and also mass sending tile data (should be same as tile submission anyways)
+# Customizable board multipliers.
+# 
 
 # TODO:
 # Game.gd:
@@ -20,7 +19,7 @@ extends Node
 
 # TODO: Game instance list (lobby system)
 # TODO: bake leaderboard data into array (bake data such as player name and points)
-# TODO: Host player functionality (handles game instance settings such as turn count, turn timer, start game, etc.)
+# TODO: Host player functionality (customize game instance settings such as turn count, turn timer, force start game, etc.)
 
 class PlayerData:
 	extends RefCounted
@@ -38,6 +37,98 @@ class PlayerData:
 
 const DEFAULT_TURN_COUNT: int = 8
 const DEFAULT_TURN_TIMER: float = 60.0
+
+const DEFAULT_TILE_BOARD_MULTIPLIERS_LETTER: Array[int] = [
+	1, 1, 2, 1, 2, 1, 1, 2, 1, 2, 1, 1, 2, 1, 2, 1,
+	1, 2, 1, 2, 1, 1, 3, 1, 1, 1, 3, 1, 1, 2, 1, 2,
+	1, 1, 3, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 3, 1,
+	1, 2, 1, 1, 1, 2, 1, 1, 3, 1, 1, 2, 1, 1, 1, 2,
+	2, 1, 1, 1, 2, 1, 2, 1, 1, 1, 2, 1, 2, 1, 1, 1,
+	1, 2, 1, 1, 1, 3, 1, 1, 1, 1, 1, 3, 1, 1, 1, 2,
+	2, 1, 1, 1, 1, 1, 1, 2, 1, 2, 1, 1, 1, 1, 1, 1,
+	1, 3, 1, 1, 2, 1, 2, 1, 1, 1, 2, 1, 2, 1, 1, 3,
+	1, 1, 1, 3, 1, 1, 1, 1, 1, 1, 1, 1, 1, 3, 1, 1,
+	1, 3, 1, 1, 2, 1, 2, 1, 1, 1, 2, 1, 2, 1, 1, 3,
+	2, 1, 1, 1, 1, 1, 1, 2, 1, 2, 1, 1, 1, 1, 1, 1,
+	1, 1, 1, 1, 1, 3, 1, 1, 1, 1, 1, 3, 1, 1, 1, 1,
+	2, 1, 1, 1, 2, 1, 2, 1, 1, 1, 2, 1, 2, 1, 1, 1,
+	1, 2, 1, 1, 1, 2, 1, 1, 3, 1, 1, 2, 1, 1, 1, 2,
+	1, 1, 3, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 3, 1,
+	1, 2, 1, 2, 1, 1, 3, 1, 1, 1, 3, 1, 1, 2, 1, 2,
+]
+const DEFAULT_TILE_BOARD_MULTIPLIERS_LETTER_SIZE: Vector2i = Vector2i(16, 16)
+
+const DEFAULT_TILE_BOARD_MULTIPLIERS_WORD: Array[int] = [
+	1, 1, 1, 2, 1, 1, 1, 1, 2, 1, 1, 1, 1, 2, 1, 1,
+	1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1,
+	1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1,
+	1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1,
+	1, 1, 1, 1, 1, 2, 1, 1, 1, 1, 1, 2, 1, 1, 1, 1,
+	2, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1,
+	1, 1, 1, 1, 2, 1, 1, 1, 1, 1, 1, 1, 2, 1, 1, 1,
+	1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1,
+	1, 1, 1, 1, 1, 1, 1, 1, 3, 1, 1, 1, 1, 1, 1, 1,
+	1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1,
+	1, 1, 1, 1, 2, 1, 1, 1, 1, 1, 1, 1, 2, 1, 1, 1,
+	2, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1,
+	1, 1, 1, 1, 1, 2, 1, 1, 1, 1, 1, 2, 1, 1, 1, 1,
+	1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1,
+	1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1,
+	1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1,
+]
+const DEFAULT_TILE_BOARD_MULTIPLIERS_WORD_SIZE: Vector2i = Vector2i(16, 16)
+
+enum SubmissionResult {
+	OK,
+	ERROR,
+	TIMED_OUT,
+	STILL_PROCESSING,
+	ALREADY_SUBMITTED,
+	EMPTY_SUBMISSION,
+	INVALID_SUBMISSION,
+	INVALID_TILES,
+	TILES_OVERLAPPING,
+	TILES_NOT_COLLINEAR,
+	TILES_NOT_CONTIGUOUS,
+	TILES_NOT_CONNECTED,
+	FIRST_CENTER,
+	TOO_SHORT,
+	INVALID_WORD,
+}
+
+static func get_submission_result_message(submission_result: SubmissionResult) -> String:
+	match submission_result:
+		SubmissionResult.OK:
+			return "Submission passed!"
+		SubmissionResult.ERROR:
+			return "Submission error!"
+		SubmissionResult.TIMED_OUT:
+			return "Submission time out!"
+		SubmissionResult.STILL_PROCESSING:
+			return "Submission still processing!"
+		SubmissionResult.ALREADY_SUBMITTED:
+			return "Already submitted this turn!"
+		SubmissionResult.EMPTY_SUBMISSION:
+			return "Empty submission!"
+		SubmissionResult.INVALID_SUBMISSION:
+			return "Invalid submission!"
+		SubmissionResult.INVALID_TILES:
+			return "Invalid submission tiles! (Game problem)"
+		SubmissionResult.TILES_OVERLAPPING:
+			return "Submission is out of date!"
+		SubmissionResult.TILES_NOT_COLLINEAR:
+			return "Submission tiles are not aligned!"
+		SubmissionResult.TILES_NOT_CONTIGUOUS:
+			return "Submission tiles are not contiguous!"
+		SubmissionResult.TILES_NOT_CONNECTED:
+			return "Submission tiles are not connected!"
+		SubmissionResult.FIRST_CENTER:
+			return "The first word must be on the center tile!"
+		SubmissionResult.TOO_SHORT:
+			return "Submission word is too short!"
+		SubmissionResult.INVALID_WORD:
+			return "Not a valid word!"
+	return "?"
 
 signal updated()
 
@@ -313,6 +404,29 @@ func _rpc_add_tile_board_tile(bytes: PackedByteArray) -> void:
 	_tile_board[tile_position] = tile
 	
 	tile_board_tile_added.emit(tile_position, tile)
+
+#endregion
+#region Tile Board Multipliers
+
+var _tile_board_multipliers_letter: Array[int] = DEFAULT_TILE_BOARD_MULTIPLIERS_LETTER
+var _tile_board_multipliers_letter_size: Vector2i = DEFAULT_TILE_BOARD_MULTIPLIERS_LETTER_SIZE
+
+func get_tile_board_multiplier_letter(tile_position: Vector2i) -> int:
+	var wrapped: Vector2i = Vector2i(
+		posmod(tile_position.x, _tile_board_multipliers_letter_size.x),
+		posmod(tile_position.y, _tile_board_multipliers_letter_size.y)
+	)
+	return _tile_board_multipliers_letter[wrapped.x + (wrapped.y * _tile_board_multipliers_letter_size.x)]
+
+var _tile_board_multipliers_word: Array[int] = DEFAULT_TILE_BOARD_MULTIPLIERS_WORD
+var _tile_board_multipliers_word_size: Vector2i = DEFAULT_TILE_BOARD_MULTIPLIERS_WORD_SIZE
+
+func get_tile_board_multiplier_word(tile_position: Vector2i) -> int:
+	var wrapped: Vector2i = Vector2i(
+		posmod(tile_position.x, _tile_board_multipliers_word_size.x),
+		posmod(tile_position.y, _tile_board_multipliers_word_size.y)
+	)
+	return _tile_board_multipliers_word[wrapped.x + (wrapped.y * _tile_board_multipliers_word_size.x)]
 
 #endregion
 #region Player
@@ -825,7 +939,7 @@ func _physics_process(delta: float) -> void:
 					clear_all_players_submitted()
 					set_play(false)
 
-#region Byte Encoding/Decoding
+#region Byte Encoding/Decoding Helpers
 
 func _encode_tile(tile: Tile) -> int:
 	var byte: int = 0
@@ -854,7 +968,7 @@ func _decode_tiles(bytes: PackedByteArray) -> Array[Tile]:
 		tiles.append(_decode_tile(bytes[index]))
 	return tiles
 
-# NOTE: TileMap coordinates are limited to 16 bit signed integers.
+# NOTE: TileMapLayer coordinates are limited to 16 bit signed integers.
 # tile position x: 2 bytes (16 bit signed int)
 # tile position y: 2 bytes (16 bit signed int)
 # tile face: 1 byte (8 bit unsigned int)
@@ -882,3 +996,219 @@ func _decode_tile_board(bytes: PackedByteArray) -> Dictionary[Vector2i, Tile]:
 	return tile_board
 
 #endregion
+
+# TODO: Validation.
+# Player client needs to validate first, then if OK send an RPC to the server.
+# Server then validates (immediately or in a queue?)
+# if OK, updates game state and sneds success RPC
+
+func request_validate_submission(submission: Dictionary[Vector2i, Tile]) -> void:
+	pass
+
+@rpc("any_peer", "call_remote", "reliable", 0)
+func _rpc_request_validate_submission(bytes: PackedByteArray) -> void:
+	var player_id: int = multiplayer.get_remote_sender_id()
+	var submission: Dictionary[Vector2i, Tile] = _decode_tile_board(bytes)
+	
+
+func validate_submission(player_id: int, submission: Dictionary[Vector2i, Tile]) -> SubmissionResult:
+	# Check if player has already submitted this turn.
+	if _players[player_id].submitted:
+		return SubmissionResult.ALREADY_SUBMITTED
+	
+	# Empty submissions are invalid.
+	if submission.is_empty():
+		return SubmissionResult.EMPTY_SUBMISSION
+	
+	# Check for invalid player tile data.
+	var player_tiles: Array[Tile] = _players[player_id].tiles
+	for tile_position: Vector2i in submission:
+		var submission_tile: Tile = submission[tile_position]
+		var check: bool = false
+		
+		# Match player tiles to submission tiles. If no match can be found, the submission is invalid.
+		# Wild tiles can match even if the faces are different.
+		# Search is destructive to account for duplicate tiles.
+		for player_tile: Tile in player_tiles:
+			if player_tile.is_wild() != submission_tile.is_wild():
+				continue
+			
+			if !player_tile.is_wild() && (player_tile.get_face() != submission_tile.get_face()):
+				continue
+			
+			# Tile match was found.
+			check = true
+			player_tiles.erase(player_tile)
+			break
+		
+		if !check:
+			return SubmissionResult.INVALID_TILES# game code problem
+	
+	# Check for first word length.
+	if _tile_board.is_empty() && submission.size() < 2:
+		return SubmissionResult.TOO_SHORT
+	
+	# Check for overlapping tile positions.
+	# Usually happens if the client's tile board is behind on updates (e.g. another player had just submitted).
+	for tile_position: Vector2i in submission:
+		if _tile_board.has(tile_position):
+			return SubmissionResult.TILES_OVERLAPPING
+	
+	# TODO: Optimize all of this.
+	# Make more flexible on axis checks (hexagon tiles?)
+	
+	var tile_position_default: Vector2i = submission.keys()[0]
+	var tile_major_axis: Vector2i = Vector2i.RIGHT# Valid submission has all tiles on one major axis.
+	var tile_major_axis_min: Vector2i = tile_position_default# Min tile on major axis (including board tiles)
+	var tile_major_axis_max: Vector2i = tile_position_default# Max tile on major axis (including board tiles)
+	var tile_minor_axis: Vector2i = Vector2i.DOWN# Not the major axis.
+	
+	# Check if tiles are collinear and contiguous.
+	# Get component-wise min and max (upper-left and bottom-right 2D rect).
+	var tile_rect_min: Vector2i = tile_position_default
+	var tile_rect_max: Vector2i = tile_position_default
+	for tile_position: Vector2i in submission:
+		tile_rect_min = tile_rect_min.min(tile_position)
+		tile_rect_max = tile_rect_max.max(tile_position)
+	
+	# If both axis components are non-zero, tiles are not collinear.
+	var tile_rect_delta: Vector2i = (tile_rect_max - tile_rect_min).mini(1)
+	if tile_rect_delta == Vector2i.ONE:
+		return SubmissionResult.TILES_NOT_COLLINEAR
+	
+	if submission.size() > 1:
+		tile_major_axis = tile_rect_delta
+		tile_minor_axis = Vector2i.ONE - tile_major_axis
+	
+	# NOTE: An axis is either Vector2i.DOWN or Vector2i.RIGHT.
+	assert(tile_major_axis == Vector2i.DOWN || tile_major_axis == Vector2i.RIGHT)
+	assert(tile_minor_axis == Vector2i.DOWN || tile_minor_axis == Vector2i.RIGHT)
+	assert(tile_major_axis != tile_minor_axis)
+	
+	# Get major axis min and max.
+	while true:
+		var tile_position: Vector2i = tile_major_axis_min - tile_major_axis
+		if !submission.has(tile_position) && !_tile_board.has(tile_position):
+			break
+		tile_major_axis_min = tile_position
+	
+	while true:
+		var tile_position: Vector2i = tile_major_axis_max + tile_major_axis
+		if !submission.has(tile_position) && !_tile_board.has(tile_position):
+			break
+		tile_major_axis_max = tile_position
+	
+	# If axis min/max is more/less than rect min/max, tiles are not contiguous.
+	if tile_major_axis_min > tile_rect_min || tile_major_axis_max < tile_rect_max:
+		return SubmissionResult.TILES_NOT_CONTIGUOUS
+	
+	# Check for center tile position (if first submission).
+	if _tile_board.is_empty():
+		var has_center: bool = false
+		for tile_position: Vector2i in submission:
+			if tile_position == Vector2i.ZERO:
+				has_center = true
+		if !has_center:
+			return SubmissionResult.FIRST_CENTER
+	
+	# Check if connects to tiles already on the board.
+	if !_tile_board.is_empty():
+		var check: bool = false
+		for tile_position: Vector2i in submission:
+			if (_tile_board.has(tile_position + Vector2i.DOWN) || 
+				_tile_board.has(tile_position + Vector2i.UP) ||
+				_tile_board.has(tile_position + Vector2i.RIGHT) ||
+				_tile_board.has(tile_position + Vector2i.LEFT)):
+				check = true
+				break
+		if !check:
+			return SubmissionResult.TILES_NOT_CONNECTED
+	
+	var points: int = 0
+	
+	# Get all words created by submission and calculate points.
+	# Words are 2 or more consecutive tiles in left->right and top->bottom directions.
+	var words: Array[String] = []
+	# Get major axis word.
+	var tile_major_axis_word: String = ""
+	var tile_major_axis_position: Vector2i = tile_major_axis_min
+	var tile_major_axis_points: int = 0
+	var tile_major_axis_points_multiplier: int = 1
+	while tile_major_axis_position <= tile_major_axis_max:
+		var tile: Tile = null
+		if _tile_board.has(tile_major_axis_position):
+			tile = _tile_board[tile_major_axis_position]
+		elif submission.has(tile_major_axis_position):
+			tile = submission[tile_major_axis_position]
+		
+		tile_major_axis_word += tile.get_face_string()
+		tile_major_axis_points += tile.get_face_points() * get_tile_board_multiplier_letter(tile_major_axis_position)
+		tile_major_axis_points_multiplier *= get_tile_board_multiplier_word(tile_major_axis_position)
+		tile_major_axis_position += tile_major_axis
+	
+	if tile_major_axis_word.length() > 1:
+		words.append(tile_major_axis_word)
+		points += tile_major_axis_points * tile_major_axis_points_multiplier
+	
+	# Get minor axis words (only from submission tiles!)
+	for tile_position: Vector2i in submission:
+		var tile: Tile = submission[tile_position]
+		var tile_minor_axis_word: String = tile.get_face_string()
+		var tile_minor_axis_points: int = tile.get_face_points() * get_tile_board_multiplier_letter(tile_position)
+		var tile_minor_axis_points_multiplier: int = get_tile_board_multiplier_word(tile_position)
+		
+		# Navigate to minor axis min.
+		var tile_minor_axis_min: Vector2i = tile_position
+		while true:
+			tile_minor_axis_min -= tile_minor_axis
+			if _tile_board.has(tile_minor_axis_min):
+				tile = _tile_board[tile_minor_axis_min]
+			elif submission.has(tile_minor_axis_min):
+				tile = submission[tile_minor_axis_min]
+			else:
+				break
+			
+			tile_minor_axis_word = tile.get_face_string() + tile_minor_axis_word
+			tile_minor_axis_points += tile.get_face_points() * get_tile_board_multiplier_letter(tile_minor_axis_min)
+			tile_minor_axis_points_multiplier *= get_tile_board_multiplier_word(tile_minor_axis_min)
+		
+		# Navigate to minor axis max.
+		var tile_minor_axis_max: Vector2i = tile_position
+		while true:
+			tile_minor_axis_max += tile_minor_axis
+			if _tile_board.has(tile_minor_axis_max):
+				tile = _tile_board[tile_minor_axis_max]
+			elif submission.has(tile_minor_axis_max):
+				tile = submission[tile_minor_axis_max]
+			else:
+				break
+			
+			tile_minor_axis_word = tile.get_face_string() + tile_minor_axis_word
+			tile_minor_axis_points += tile.get_face_points() * get_tile_board_multiplier_letter(tile_minor_axis_max)
+			tile_minor_axis_points_multiplier *= get_tile_board_multiplier_word(tile_minor_axis_max)
+		
+		if tile_minor_axis_word.length() > 1:
+			words.append(tile_minor_axis_word)
+			points += tile_minor_axis_points * tile_minor_axis_points_multiplier
+	
+	# Check words with WordCheck.
+	for word: String in words:
+		# TODO: figure this out
+		# use a global (me no likey)? pass a callable (not clean)? set as public field (probably the way to go)?
+		if false:
+			return SubmissionResult.INVALID_WORD
+	
+	# TODO: move this
+	# Submission passed all checks!
+	# Update game board state (add tiles), remove player tiles, and set player as submitted.
+	#for coordinates: Vector2i in submission:
+		#var face: int = submission[coordinates]
+		#_tile_board.add_tile(coordinates, face)
+	#
+	#_game_data.set_player_tiles(player_id, player_tiles)
+	#_game_data.set_player_points(player_id, _game_data.get_player_points(player_id) + points)
+	#_game_data.set_player_submitted(player_id, true)
+	#
+	#_fill_player_tiles(player_id)
+	
+	return SubmissionResult.OK
