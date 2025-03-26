@@ -7,7 +7,8 @@ extends Node
 # Each player only instantiates the one game instance they've joined.
 
 # TODO:
-# Customizable board multipliers.
+# Player created lobbies (instance name and password).
+# Customizable board multipliers (set by player host).
 # 
 
 # TODO:
@@ -80,11 +81,13 @@ const DEFAULT_TILE_BOARD_MULTIPLIERS_WORD_SIZE: Vector2i = Vector2i(16, 16)
 
 enum SubmissionResult {
 	OK,
+	AWAITING,
 	ERROR,
 	TIMED_OUT,
 	STILL_PROCESSING,
 	ALREADY_SUBMITTED,
 	EMPTY_SUBMISSION,
+	INVALID_PLAYER,
 	INVALID_SUBMISSION,
 	INVALID_TILES,
 	TILES_OVERLAPPING,
@@ -100,6 +103,8 @@ static func get_submission_result_message(submission_result: SubmissionResult) -
 	match submission_result:
 		SubmissionResult.OK:
 			return "Submission passed!"
+		SubmissionResult.AWAITING:
+			return "Awaiting submission result..."
 		SubmissionResult.ERROR:
 			return "Submission error!"
 		SubmissionResult.TIMED_OUT:
@@ -859,176 +864,53 @@ func get_player_place(player_id: int) -> int:
 
 #endregion
 #endregion
+#region Submission
 
-func _ready() -> void:
-	if Engine.is_editor_hint():
-		return
-	
-	updated.connect(_on_updated)
+signal submission_validated(submission_result: SubmissionResult)
 
-func _on_updated() -> void:
-	_dirty = true
+var _submission_validating: bool = false
 
-## Custom sort method for sorting player IDs.
-## Spectators are sorted by name (ascending order) and are pushed after non-spectators.
-## Non-spectators are sorted by points (descending order).
-func _sort_player_custom(a: int, b: int) -> bool:
-	if _players[a].spectator:
-		return _players[b].spectator && (_players[a].name < _players[b].name)
-	
-	if _players[b].spectator:
-		return true
-	
-	return _players[a].points > _players[b].points
-
-func _physics_process(delta: float) -> void:
-	if Engine.is_editor_hint():
-		return
-	
-	if _dirty:
-		# Sort players.
-		var players_sorted: Array[int] = []
-		players_sorted.append_array(_players.keys())
-		players_sorted.sort_custom(_sort_player_custom)
-		
-		# Assign player places in ascending order based on players_sorted.
-		var place: int = 0
-		for player_id: int in players_sorted:
-			if !_players[player_id].spectator:
-				_players[player_id].place = place
-				place += 1
-		
-		updated.emit()
-		_dirty = false
-	
-	# TODO: handle disconnections in game.gd (should free game instances)
-	if !multiplayer.has_multiplayer_peer():
-		push_error("GameInstance '<%s>' | Multiplayer is not active." % [self.name])
-		get_tree().quit(1)# if this happens i am terrible programmer
-		return
-	
-	if !_play:
-		# TODO: if no players, stop game instance (notify game.gd with signal? then queue frees this)?
-		
-		if is_multiplayer_authority():
-			# Start play loop when all players are ready.
-			# TODO: Start a countdown instead? If 50% of players are ready, maybe start a countdown at 20 seconds?
-			if get_all_players_ready():
-				set_play(true)
-	else:
-		# Decrement turn timer.
-		if _turn_timer > 0.0:
-			_turn_timer = maxf(_turn_timer - delta, 0.0)
-		
-		if is_multiplayer_authority():
-			if _turn_timer > 3.0 && get_all_players_submitted():
-				# Fast-forward turn timer if all players have submitted.
-				set_turn_timer(3.0)
-			elif is_zero_approx(_turn_timer):
-				# Increment turn count on turn timer timeout. Stop on last turn.
-				if _turn_count < _turn_count_max:
-					# Prepare next turn.
-					set_turn_count(_turn_count + 1)
-					set_turn_timer(_turn_timer_max)
-					clear_all_players_submitted()
-				else:
-					# Reset data and stop play loop.
-					# TODO: Bake leaderboard. _leaderboard_names _leaderboard_points
-					clear_all_players_tiles()
-					set_all_players_ready(false)
-					clear_all_players_submitted()
-					set_play(false)
-
-#region Byte Encoding/Decoding Helpers
-
-func _encode_tile(tile: Tile) -> int:
-	var byte: int = 0
-	if tile.is_wild():
-		byte |= 1 << 7
-	byte |= tile.get_face()
-	return byte
-
-func _decode_tile(byte: int) -> Tile:
-	return Tile.new(byte & ~(1 << 7), byte & (1 << 7))
-
-## Encode tiles to a byte array.
-## Right most bits of a byte indicate face.
-## Left most bit of a byte indicates wild.
-func _encode_tiles(tiles: Array[Tile]) -> PackedByteArray:
-	var bytes: PackedByteArray = PackedByteArray()
-	bytes.resize(tiles.size())
-	for index: int in tiles.size():
-		bytes[index] = _encode_tile(tiles[index])
-	return bytes
-
-## Decode tile from a byte.
-func _decode_tiles(bytes: PackedByteArray) -> Array[Tile]:
-	var tiles: Array[Tile] = []
-	for index: int in bytes.size():
-		tiles.append(_decode_tile(bytes[index]))
-	return tiles
-
-# NOTE: TileMapLayer coordinates are limited to 16 bit signed integers.
-# tile position x: 2 bytes (16 bit signed int)
-# tile position y: 2 bytes (16 bit signed int)
-# tile face: 1 byte (8 bit unsigned int)
-func _encode_tile_board(tile_board: Dictionary[Vector2i, Tile]) -> PackedByteArray:
-	var bytes: PackedByteArray = PackedByteArray()
-	bytes.resize(tile_board.size() * 5)
-	var index: int = 0
-	for tile_position: Vector2i in tile_board:
-		bytes.encode_s16(index + 0, tile_position.x)
-		bytes.encode_s16(index + 2, tile_position.y)
-		bytes.encode_u8(index + 4, _encode_tile(tile_board[tile_position]))
-		index += 5
-	return bytes
-
-func _decode_tile_board(bytes: PackedByteArray) -> Dictionary[Vector2i, Tile]:
-	if bytes.size() % 5 != 0:
-		return {}
-	
-	var tile_board: Dictionary[Vector2i, Tile] = {}
-	var index: int = 0
-	while index < bytes.size():
-		var tile_position: Vector2i = Vector2i(bytes.decode_s16(index + 0), bytes.decode_s16(index + 2))
-		tile_board[tile_position] = _decode_tile(bytes.decode_u8(index + 4))
-		index += 5
-	return tile_board
-
-#endregion
-
-# TODO: Validation.
-# Player client needs to validate first, then if OK send an RPC to the server.
-# Server then validates (immediately or in a queue?)
-# if OK, updates game state and sneds success RPC
-
-func request_validate_submission(submission: Dictionary[Vector2i, Tile]) -> void:
-	pass
+func is_submission_validating() -> bool:
+	return _submission_validating
 
 @rpc("any_peer", "call_remote", "reliable", 0)
-func _rpc_request_validate_submission(bytes: PackedByteArray) -> void:
-	var player_id: int = multiplayer.get_remote_sender_id()
-	var submission: Dictionary[Vector2i, Tile] = _decode_tile_board(bytes)
-	
+func _rpc_request_submission_validate(bytes: PackedByteArray) -> void:
+	if is_multiplayer_authority():
+		var player_id: int = multiplayer.get_remote_sender_id()
+		var submission: Dictionary[Vector2i, Tile] = _decode_tile_board(bytes)
+		_rpc_return_submission_validate.rpc_id(player_id, submission_validate(player_id, submission))
 
-func validate_submission(player_id: int, submission: Dictionary[Vector2i, Tile]) -> SubmissionResult:
+@rpc("authority", "call_remote", "reliable", 0)
+func _rpc_return_submission_validate(submission_result: SubmissionResult) -> void:
+	submission_validated.emit(submission_result)
+	_submission_validating = false
+
+func submission_validate(player_id: int, submission: Dictionary[Vector2i, Tile]) -> SubmissionResult:
+	# Check if this instance has player.
+	if !has_player_id(player_id):
+		return SubmissionResult.INVALID_PLAYER
+	
+	# If not the authority, check if player id is remote.
+	if !is_multiplayer_authority() && (player_id != multiplayer.get_unique_id()):
+		return SubmissionResult.INVALID_PLAYER
+	
 	# Check if player has already submitted this turn.
-	if _players[player_id].submitted:
+	if _submission_validating || get_player_submitted(player_id):
 		return SubmissionResult.ALREADY_SUBMITTED
 	
-	# Empty submissions are invalid.
+	# Check if submission is empty.
 	if submission.is_empty():
 		return SubmissionResult.EMPTY_SUBMISSION
 	
 	# Check for invalid player tile data.
-	var player_tiles: Array[Tile] = _players[player_id].tiles
+	var player_tiles: Array[Tile] = get_player_tiles(player_id)
 	for tile_position: Vector2i in submission:
 		var submission_tile: Tile = submission[tile_position]
 		var check: bool = false
 		
 		# Match player tiles to submission tiles. If no match can be found, the submission is invalid.
 		# Wild tiles can match even if the faces are different.
-		# Search is destructive to account for duplicate tiles.
+		# Search is destructive to account for duplicate tiles (tally).
 		for player_tile: Tile in player_tiles:
 			if player_tile.is_wild() != submission_tile.is_wild():
 				continue
@@ -1191,24 +1073,160 @@ func validate_submission(player_id: int, submission: Dictionary[Vector2i, Tile])
 			words.append(tile_minor_axis_word)
 			points += tile_minor_axis_points * tile_minor_axis_points_multiplier
 	
-	# Check words with WordCheck.
+	# Check words with a word database.
 	for word: String in words:
-		# TODO: figure this out
-		# use a global (me no likey)? pass a callable (not clean)? set as public field (probably the way to go)?
-		if false:
+		if !WordDatabase.is_word(word):
 			return SubmissionResult.INVALID_WORD
 	
-	# TODO: move this
 	# Submission passed all checks!
-	# Update game board state (add tiles), remove player tiles, and set player as submitted.
-	#for coordinates: Vector2i in submission:
-		#var face: int = submission[coordinates]
-		#_tile_board.add_tile(coordinates, face)
-	#
-	#_game_data.set_player_tiles(player_id, player_tiles)
-	#_game_data.set_player_points(player_id, _game_data.get_player_points(player_id) + points)
-	#_game_data.set_player_submitted(player_id, true)
-	#
-	#_fill_player_tiles(player_id)
+	if !is_multiplayer_authority():
+		_submission_validating = true
+		_rpc_request_submission_validate.rpc_id(get_multiplayer_authority(), _encode_tile_board(submission))
+		return SubmissionResult.AWAITING
 	
+	set_player_submitted(player_id, true)
+	# TODO: Fill player tiles.
+	set_player_tiles(player_id, player_tiles)
+	set_player_points(player_id, get_player_points(player_id) + points)
+	for tile_position: Vector2i in submission:
+		add_tile_board_tile(tile_position, submission[tile_position])
 	return SubmissionResult.OK
+
+#endregion
+
+func _ready() -> void:
+	if Engine.is_editor_hint():
+		return
+	
+	updated.connect(_on_updated)
+
+func _on_updated() -> void:
+	_dirty = true
+
+## Custom sort method for sorting player IDs.
+## Spectators are sorted by name (ascending order) and are pushed after non-spectators.
+## Non-spectators are sorted by points (descending order).
+func _sort_player_custom(a: int, b: int) -> bool:
+	if _players[a].spectator:
+		return _players[b].spectator && (_players[a].name < _players[b].name)
+	
+	if _players[b].spectator:
+		return true
+	
+	return _players[a].points > _players[b].points
+
+func _physics_process(delta: float) -> void:
+	if Engine.is_editor_hint():
+		return
+	
+	if _dirty:
+		# Sort players.
+		var players_sorted: Array[int] = []
+		players_sorted.append_array(_players.keys())
+		players_sorted.sort_custom(_sort_player_custom)
+		
+		# Assign player places in ascending order based on players_sorted.
+		var place: int = 0
+		for player_id: int in players_sorted:
+			if !_players[player_id].spectator:
+				_players[player_id].place = place
+				place += 1
+		
+		updated.emit()
+		_dirty = false
+	
+	# TODO: handle disconnections in game.gd (should free game instances)
+	if !multiplayer.has_multiplayer_peer():
+		push_error("GameInstance '<%s>' | Multiplayer is not active." % [self.name])
+		get_tree().quit(1)# if this happens i am terrible programmer
+		return
+	
+	if !_play:
+		# TODO: if no players, stop game instance (notify game.gd with signal? then queue frees this)?
+		
+		if is_multiplayer_authority():
+			# Start play loop when all players are ready.
+			# TODO: Start a countdown instead? If 50% of players are ready, maybe start a countdown at 20 seconds?
+			if get_all_players_ready():
+				set_play(true)
+	else:
+		# Decrement turn timer.
+		if _turn_timer > 0.0:
+			_turn_timer = maxf(_turn_timer - delta, 0.0)
+		
+		if is_multiplayer_authority():
+			if _turn_timer > 3.0 && get_all_players_submitted():
+				# Fast-forward turn timer if all players have submitted.
+				set_turn_timer(3.0)
+			elif is_zero_approx(_turn_timer):
+				# Increment turn count on turn timer timeout. Stop on last turn.
+				if _turn_count < _turn_count_max:
+					# Prepare next turn.
+					set_turn_count(_turn_count + 1)
+					set_turn_timer(_turn_timer_max)
+					clear_all_players_submitted()
+				else:
+					# Reset data and stop play loop.
+					# TODO: Bake leaderboard. _leaderboard_names _leaderboard_points
+					clear_all_players_tiles()
+					set_all_players_ready(false)
+					clear_all_players_submitted()
+					set_play(false)
+
+#region Byte Encoding/Decoding Helpers
+
+func _encode_tile(tile: Tile) -> int:
+	var byte: int = 0
+	if tile.is_wild():
+		byte |= 1 << 7
+	byte |= tile.get_face()
+	return byte
+
+func _decode_tile(byte: int) -> Tile:
+	return Tile.new(byte & ~(1 << 7), byte & (1 << 7))
+
+## Encode tiles to a byte array.
+## Right most bits of a byte indicate face.
+## Left most bit of a byte indicates wild.
+func _encode_tiles(tiles: Array[Tile]) -> PackedByteArray:
+	var bytes: PackedByteArray = PackedByteArray()
+	bytes.resize(tiles.size())
+	for index: int in tiles.size():
+		bytes[index] = _encode_tile(tiles[index])
+	return bytes
+
+## Decode tile from a byte.
+func _decode_tiles(bytes: PackedByteArray) -> Array[Tile]:
+	var tiles: Array[Tile] = []
+	for index: int in bytes.size():
+		tiles.append(_decode_tile(bytes[index]))
+	return tiles
+
+# NOTE: TileMapLayer coordinates are limited to 16 bit signed integers.
+# tile position x: 2 bytes (16 bit signed int)
+# tile position y: 2 bytes (16 bit signed int)
+# tile face: 1 byte (8 bit unsigned int)
+func _encode_tile_board(tile_board: Dictionary[Vector2i, Tile]) -> PackedByteArray:
+	var bytes: PackedByteArray = PackedByteArray()
+	bytes.resize(tile_board.size() * 5)
+	var index: int = 0
+	for tile_position: Vector2i in tile_board:
+		bytes.encode_s16(index + 0, tile_position.x)
+		bytes.encode_s16(index + 2, tile_position.y)
+		bytes.encode_u8(index + 4, _encode_tile(tile_board[tile_position]))
+		index += 5
+	return bytes
+
+func _decode_tile_board(bytes: PackedByteArray) -> Dictionary[Vector2i, Tile]:
+	if bytes.size() % 5 != 0:
+		return {}
+	
+	var tile_board: Dictionary[Vector2i, Tile] = {}
+	var index: int = 0
+	while index < bytes.size():
+		var tile_position: Vector2i = Vector2i(bytes.decode_s16(index + 0), bytes.decode_s16(index + 2))
+		tile_board[tile_position] = _decode_tile(bytes.decode_u8(index + 4))
+		index += 5
+	return tile_board
+
+#endregion

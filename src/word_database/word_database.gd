@@ -25,10 +25,10 @@ static func _static_init() -> void:
 	while !words_file.eof_reached():
 		var word: String = words_file.get_line()
 		if !word.is_empty():
-			_words[word] = true
+			_words[word.to_lower()] = true
 	
 	words_file.close()
 	print("WordDatabase | Finished reading words.")
 
 static func is_word(word: String) -> bool:
-	return _words.has(word)
+	return _words.has(word.to_lower())

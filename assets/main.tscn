@@ -1,10 +1,9 @@
-[gd_scene load_steps=21 format=4 uid="uid://nw2kb71xa2db"]
+[gd_scene load_steps=20 format=4 uid="uid://nw2kb71xa2db"]
 
 [ext_resource type="Script" uid="uid://lljyxnqqax7l" path="res://src/main.gd" id="1_db5cl"]
 [ext_resource type="TileSet" uid="uid://cyojl6rec7r5t" path="res://assets/board.tres" id="2_06ig3"]
 [ext_resource type="Script" uid="uid://c6hl88o0btr7v" path="res://src/game/game.gd" id="2_fphxj"]
 [ext_resource type="Script" uid="uid://jn8a64othr63" path="res://assets/game_camera.gd" id="2_j2eim"]
-[ext_resource type="Script" uid="uid://c7y3iqwrjfr06" path="res://src/game/game_instance.gd" id="3_h4xlo"]
 [ext_resource type="Script" uid="uid://b070kcr60nwxj" path="res://src/game/game_lobby.gd" id="5_ew6cl"]
 [ext_resource type="Script" uid="uid://b2ot00vang7bj" path="res://src/tile/tile_board_2d.gd" id="5_m5usj"]
 [ext_resource type="Texture2D" uid="uid://bgp2rrk71wsts" path="res://assets/word_war.png" id="6_ew6cl"]
@@ -34,10 +33,7 @@ script = ExtResource("2_fphxj")
 script = ExtResource("6_ujfqy")
 metadata/_custom_type_script = "uid://b3eo1vdw04anx"
 
-[node name="root" type="Node" parent="game"]
-
-[node name="game_instance" type="Node" parent="game/root"]
-script = ExtResource("3_h4xlo")
+[node name="instances" type="Node" parent="game"]
 
 [node name="game_wait" type="CanvasLayer" parent="game"]
 layer = 16
@@ -198,7 +194,7 @@ follow_viewport_enabled = true
 
 [node name="game_board" type="Node2D" parent="game/game_play" node_paths=PackedStringArray("_game_data")]
 script = ExtResource("6_km2eh")
-_game_data = NodePath("../../root/game_instance")
+_game_data = NodePath("")
 
 [node name="game_camera" type="Camera2D" parent="game/game_play/game_board"]
 process_callback = 0

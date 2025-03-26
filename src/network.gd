@@ -8,6 +8,11 @@ class_name Network
 const CERTIFICATE_PATH: String = "res://certificate.pem"
 const PRIVATE_KEY_PATH: String = "private_key.pem"
 
+signal server_started()
+signal server_stopped()
+signal client_started()
+signal client_stopped()
+
 ## Path to node to set as root for multiplayer branch.
 ## Leave null for scene tree root.
 @export

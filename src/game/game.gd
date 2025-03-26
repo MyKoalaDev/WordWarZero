@@ -2,8 +2,12 @@
 extends Node
 class_name Game
 
+enum State {
+	NONE,
+	
+}
+
 const GameInstance: = preload("game_instance.gd")
-const GameInstanceBoard: = preload("game_instance_board.gd")
 
 signal client_started()
 signal client_stopped()
@@ -15,15 +19,14 @@ const PLAYER_NAME_MAX_LENGTH: int = 16
 @onready
 var _network: Network = $network as Network
 @onready
-var _game_instance_root: Node = $game_instance_root as Node
+var _game_instance_root: Node = $instances as Node
 
 @onready
 var _game_lobby: GameLobby = $game_lobby/game_lobby as GameLobby
 @onready
 var _game_board: GameBoard = $game_board/game_board as GameBoard
 
-
-var _game_instances: Array[GameInstance] = []
+var _game_instances: Dictionary[int, GameInstance] = {}
 var _game_instance: GameInstance = null
 
 static func is_valid_player_name(player_name: String) -> bool:
@@ -40,15 +43,21 @@ func _ready() -> void:
 		return
 	
 	multiplayer.peer_connected.connect(_on_multiplayer_peer_connected)
+	multiplayer.peer_disconnected.connect(_on_multiplayer_peer_disconnected)
+	multiplayer.connected_to_server.connect(_on_multiplayer_server_connected)
 	multiplayer.server_disconnected.connect(_on_multiplayer_server_disconnected)
 
 func _on_multiplayer_peer_connected(player_id: int) -> void:
-	if is_multiplayer_authority():
-		_rpc_set_state.rpc_id(player_id, _state_curr)
+	pass
+
+func _on_multiplayer_peer_disconnected(player_id: int) -> void:
+	pass
+
+func _on_multiplayer_server_connected() -> void:
+	pass
 
 func _on_multiplayer_server_disconnected() -> void:
-	
-	_set_state(State.NONE)
+	pass
 
 func is_active() -> bool:
 	return _mode != Mode.NONE
