@@ -1,8 +1,6 @@
 @tool
 extends Node
 
-# TODO: add a request to join and request to leave RPCs
-
 # Node that stores and synchronizes all data relevant to a single game instance.
 # This is done to minimize processing on the server.
 # Server instantiates multiple game instances for each player-created lobby.
@@ -217,7 +215,7 @@ func check_instance_password(instance_password: String) -> bool:
 
 func set_instance_password(instance_password: String) -> bool:
 	if !is_multiplayer_authority():
-		push_error("GameInstance \"%s\" | Failed to set instance password to '%s': only the authority can set instance password." % [self.name, instance_password])
+		push_error("GameInstance \"%s\" | Failed to set instance password: only the authority can set instance password." % [self.name])
 		return false
 	
 	_instance_password = instance_password
@@ -497,8 +495,8 @@ func is_empty() -> bool:
 
 #region Player ID
 
-signal local_player_id_added()
-signal local_player_id_removed()
+signal player_id_added(player_id: int)
+signal player_id_removed(player_id: int)
 
 func get_player_ids() -> Array[int]:
 	return _players.keys()
@@ -521,8 +519,7 @@ func add_player_id(player_id: int) -> bool:
 		if _player_id != multiplayer.get_unique_id():
 			_rpc_add_player_id.rpc_id(_player_id, player_id)
 	
-	if player_id == multiplayer.get_unique_id():
-		local_player_id_added.emit()
+	player_id_added.emit(player_id)
 	updated.emit()
 	return true
 
@@ -533,8 +530,7 @@ func _rpc_add_player_id(player_id: int) -> void:
 	
 	_players[player_id] = _PlayerData.new()
 	
-	if player_id == multiplayer.get_unique_id():
-		local_player_id_added.emit()
+	player_id_added.emit(player_id)
 	updated.emit()
 
 func remove_player_id(player_id: int) -> bool:
@@ -552,8 +548,7 @@ func remove_player_id(player_id: int) -> bool:
 		if _player_id != multiplayer.get_unique_id():
 			_rpc_remove_player_id.rpc_id(_player_id, player_id)
 	
-	if player_id == multiplayer.get_unique_id():
-		local_player_id_removed.emit()
+	player_id_removed.emit(player_id)
 	updated.emit()
 	return true
 
@@ -564,8 +559,7 @@ func _rpc_remove_player_id(player_id: int) -> void:
 	
 	_players.erase(player_id)
 	
-	if player_id == multiplayer.get_unique_id():
-		local_player_id_removed.emit()
+	player_id_removed.emit(player_id)
 	updated.emit()
 
 #endregion

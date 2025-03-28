@@ -1,6 +1,9 @@
 @tool
 extends Node
 
+# TODO:
+# fancier menu transitions
+
 # TODO (where I left off)
 # game_submission problem: need to get tile board multiplier data
 
