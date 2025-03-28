@@ -31,48 +31,6 @@ var _button_submit: Button = $gui/gui/panel_bottom/h_box_container/button_submit
 var _button_recall: Button = $gui/gui/panel_bottom/h_box_container/button_recall as Button
 @onready
 var _button_swap: Button = $gui/gui/panel_bottom/h_box_container/button_swap as Button
-@onready
-var _word_check: WordCheck = $word_check as WordCheck
-
-var _turn_count: int = 0
-var _turn_count_max: int = 0
-var _turn_time: float = 0.0
-var _turn_time_max: float = 0.0
-
-var _loop: bool = false
-func is_loop() -> bool:
-	return _loop
-
-func start_loop(turn_count: int = DEFAULT_TURN_COUNT, turn_time: float = DEFAULT_TURN_TIME) -> void:
-	if !multiplayer.has_multiplayer_peer() || !is_multiplayer_authority():
-		return
-	
-	if _loop:
-		return
-	_loop = true
-	
-	_turn_count = 0
-	_turn_count_max = turn_count
-	_turn_time = 0.0
-	_turn_time_max = turn_time
-	
-	_tile_board.clear_tiles()
-	_game_data.clear_all_player_points()
-	
-	next_turn()
-
-func next_turn() -> void:
-	# Start next turn.
-	_turn_count += 1
-	_turn_time = _turn_time_max
-	# set players submit
-	# NOTE: players dont set submit at all, only server
-	# server game board submit passes submission, then sets submit and notifies all peers
-	
-	for player_id: int in _game_data.get_player_ids():
-		_fill_player_tiles(player_id)
-
-var _await_submit_results: bool = false
 
 func _ready() -> void:
 	if Engine.is_editor_hint():
@@ -131,27 +89,6 @@ var _player_submission_ids: Array[int] = []
 var _player_submission_processes: Array[Callable] = []
 var _player_submission_processing: bool = false
 
-# Client to server: submit tiles.
-# tile_pos_x: 2 bytes (16 bit signed int)
-# tile_pos_y: 2 bytes (16 bit signed int)
-# tile_face: 1 byte (8 bit unsigned int)
-@rpc("any_peer", "call_local", "reliable", 0)
-func _rpc_request_submit(bytes: PackedByteArray) -> void:
-	if multiplayer.has_multiplayer_peer() && is_multiplayer_authority():
-		var player_id: int = multiplayer.get_remote_sender_id()
-		
-		var player_submission: Dictionary[Vector2i, int] = _game_tiles.decode_submission_bytes(bytes)
-		if player_submission.is_empty():
-			_rpc_submit_result.rpc_id(player_id, SubmissionResult.INVALID_SUBMISSION)
-			return
-		
-		if _player_submission_ids.has(player_id):
-			_rpc_submit_result.rpc_id(player_id, SubmissionResult.STILL_PROCESSING)
-			return
-		
-		_player_submission_ids.append(player_id)
-		_player_submission_processes.append(_validate_submission.bind(player_id, player_submission))
-
 @rpc("any_peer", "call_local", "reliable", 0)
 func _rpc_request_swap() -> void:
 	if multiplayer.has_multiplayer_peer() && is_multiplayer_authority():
@@ -162,49 +99,6 @@ func _rpc_request_swap() -> void:
 			while player_tiles.size() < DEFAULT_TILE_COUNT:
 				player_tiles.append(Tile.get_random_face())
 			_game_data.set_player_tiles(player_id, player_tiles)
-
-func _physics_process(delta: float) -> void:
-	if Engine.is_editor_hint():
-		return
-	
-	if !active:
-		_game_camera.global_position = Vector2.ZERO
-		return
-	
-	if _await_submit_results || _game_data.get_local_player_submitted():
-		_button_submit.disabled = true
-		_button_submit.text = "Submitted"
-		_button_recall.disabled = true
-		_button_swap.disabled = true
-	else:
-		_button_submit.disabled = false
-		_button_submit.text = "Submit"
-		_button_recall.disabled = false
-		_button_swap.disabled = false
-	
-	if _turn_time > 0.0:
-		_turn_time = maxf(_turn_time - delta, 0.0)
-	
-	if multiplayer.has_multiplayer_peer() && is_multiplayer_authority():
-		while !_player_submission_processes.is_empty():
-			if _player_submission_processing:
-				break
-			_player_submission_processing = true
-			await _player_submission_processes[0].call()
-			_player_submission_ids.pop_front()
-			_player_submission_processes.pop_front()
-			_player_submission_processing = false
-		
-		# Fast forward turn timer if everyone has already submitted.
-		if _turn_time > 3.0 && _game_data.get_all_players_submitted():
-			_turn_time = 3.0
-			_rpc_set_turn_time.rpc(_turn_time, _turn_time_max)
-		if is_zero_approx(_turn_time) && _loop:
-			if _turn_count < _turn_count_max:
-				next_turn()
-			else:
-				# Out of turns, end the game loop.
-				stop_loop()
 
 @rpc("authority", "call_local", "reliable", 0)
 func _rpc_submit_result(submission_result: SubmissionResult, points: int = 0) -> void:

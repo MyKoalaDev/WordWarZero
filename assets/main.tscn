@@ -37,7 +37,6 @@ metadata/_custom_type_script = "uid://b3eo1vdw04anx"
 
 [node name="game_wait" type="CanvasLayer" parent="game"]
 layer = 16
-visible = false
 
 [node name="game_waiting" type="Control" parent="game/game_wait"]
 clip_contents = true
@@ -192,9 +191,9 @@ position = Vector2(612, 489)
 layer = 0
 follow_viewport_enabled = true
 
-[node name="game_board" type="Node2D" parent="game/game_play" node_paths=PackedStringArray("_game_data")]
+[node name="game_board" type="Node2D" parent="game/game_play"]
 script = ExtResource("6_km2eh")
-_game_data = NodePath("")
+_game_data = null
 
 [node name="game_camera" type="Camera2D" parent="game/game_play/game_board"]
 process_callback = 0
@@ -224,7 +223,6 @@ texture = SubResource("AtlasTexture_vvw4a")
 
 [node name="gui" type="CanvasLayer" parent="game/game_play/game_board"]
 layer = 4
-visible = false
 
 [node name="gui" type="Control" parent="game/game_play/game_board/gui"]
 layout_mode = 3

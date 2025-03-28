@@ -44,11 +44,6 @@ func _ready() -> void:
 	_menu_config.network_host_request.connect(_on_menu_config_network_host_request)
 	_menu_config.network_join_request.connect(_on_menu_config_network_join_request)
 	
-	_game.server_started.connect(_on_game_server_started)
-	_game.server_stopped.connect(_on_game_server_stopped)
-	_game.client_started.connect(_on_game_client_started)
-	_game.client_stopped.connect(_on_game_client_stopped)
-	
 	# Process command line arguments.
 	var args: Dictionary[String, String] = {}
 	var args_raw: PackedStringArray = OS.get_cmdline_user_args()

@@ -1,9 +1,9 @@
-# code by my-koala ͼ•ᴥ•ͽ #
+# code by MyKoala ͼ•ᴥ•ͽ #
 @tool
 extends Node
 class_name Network
 
-## MyKoala's epic node for websocket multiplayer.
+## MyKoala's epic network node for websocket multiplayer.
 
 const CERTIFICATE_PATH: String = "res://certificate.pem"
 const PRIVATE_KEY_PATH: String = "private_key.pem"
@@ -55,6 +55,17 @@ func is_server() -> bool:
 
 func is_client() -> bool:
 	return _multiplayer_api.has_multiplayer_peer() && !_multiplayer_api.is_server()
+
+func host_server_offline() -> Error:
+	# Return error if a connection is currently active.
+	if _multiplayer_api.has_multiplayer_peer():
+		push_error("Network (Server) | Failed to host server offline (a connection is already active).")
+		return ERR_ALREADY_IN_USE
+	
+	# Create server and return error.
+	var multiplayer_peer: OfflineMultiplayerPeer = OfflineMultiplayerPeer.new()
+	_multiplayer_api.multiplayer_peer = multiplayer_peer
+	return OK
 
 ## Starts server (leave default arguments for offline).
 ## Returns OK if successfully created server.

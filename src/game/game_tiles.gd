@@ -40,32 +40,6 @@ var _player_tiles_board: Dictionary[Vector2i, Tile] = {}
 var _input_mouse: bool = false
 var _input_mouse_event: bool = false
 
-func encode_submission_bytes() -> PackedByteArray:
-	var bytes: PackedByteArray = PackedByteArray()
-	bytes.resize(_player_tiles_board.size() * 5)
-	
-	var index: int = 0
-	for coordinates: Vector2i in _player_tiles_board:
-		bytes.encode_s16(index + 0, coordinates.x)
-		bytes.encode_s16(index + 2, coordinates.y)
-		bytes.encode_u8(index + 4, _player_tiles_board[coordinates].face)
-		index += 5
-	return bytes
-
-func decode_submission_bytes(bytes: PackedByteArray) -> Dictionary[Vector2i, int]:
-	if bytes.size() % 5 != 0:
-		return {}
-	
-	var submission: Dictionary[Vector2i, int] = {}
-	var index: int = 0
-	while index < bytes.size():
-		var tile_position_x: int = bytes.decode_s16(index + 0)
-		var tile_position_y: int = bytes.decode_s16(index + 2)
-		var tile_face: int = bytes.decode_u8(index + 4)
-		submission[Vector2i(tile_position_x, tile_position_y)] = tile_face
-		index += 5
-	return submission
-
 func recall_tiles() -> void:
 	var tiles: Array[Tile] = _player_tiles_board.values()
 	for tile: Tile in tiles:
@@ -75,14 +49,6 @@ func _ready() -> void:
 	if Engine.is_editor_hint():
 		return
 	
-	_game_data.updated.connect(_on_game_data_updated)
-	_tile_board.updated.connect(_on_tile_board_updated)
-
-func _on_game_data_updated() -> void:
-	_game_data_dirty = true
-
-func _on_tile_board_updated() -> void:
-	_tile_board_dirty = true
 
 func is_dragging_tile() -> bool:
 	return is_instance_valid(_player_tile_drag)

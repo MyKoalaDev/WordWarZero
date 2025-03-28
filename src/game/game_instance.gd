@@ -1,6 +1,8 @@
 @tool
 extends Node
 
+# TODO: add a request to join and request to leave RPCs
+
 # Node that stores and synchronizes all data relevant to a single game instance.
 # This is done to minimize processing on the server.
 # Server instantiates multiple game instances for each player-created lobby.
@@ -22,7 +24,7 @@ extends Node
 # TODO: bake leaderboard data into array (bake data such as player name and points)
 # TODO: Host player functionality (customize game instance settings such as turn count, turn timer, force start game, etc.)
 
-class PlayerData:
+class _PlayerData:
 	extends RefCounted
 	# Server-managed fields.
 	var name: String = "Player"
@@ -137,6 +139,9 @@ static func get_submission_result_message(submission_result: SubmissionResult) -
 
 signal updated()
 
+## Indicates if this should not be automatically deleted when this has no players (used by game.gd).
+var persistent: bool = false
+
 ## Set to true on updated signal.
 var _dirty: bool = false
 
@@ -151,15 +156,15 @@ var _leaderboard_points: PackedInt64Array = PackedInt64Array()
 # TODO: Compress into a single PackedByteArray RPC.
 func force_sync(player_id: int) -> bool:
 	if !is_multiplayer_authority():
-		push_error("GameInstance '<%s>' | Failed to force sync with player ID '%d': only the authority can force sync." % [self.name, player_id])
+		push_error("GameInstance \"%s\" | Failed to force sync with player ID '%d': only the authority can force sync." % [self.name, player_id])
 		return false
 	
 	if !_players.has(player_id):
-		push_error("GameInstance '<%s>' | Failed to force sync with player ID '%d': player ID does not exist." % [self.name, player_id])
+		push_error("GameInstance \"%s\" | Failed to force sync with player ID '%d': player ID does not exist." % [self.name, player_id])
 		return false
 	
 	if player_id == multiplayer.get_unique_id():
-		push_error("GameInstance '<%s>' | Failed to force sync with player ID '%d': cannot force sync with self." % [self.name, player_id])
+		push_error("GameInstance \"%s\" | Failed to force sync with player ID '%d': cannot force sync with self." % [self.name, player_id])
 		return false
 	
 	_rpc_set_play.rpc_id(player_id, _play)
@@ -172,7 +177,7 @@ func force_sync(player_id: int) -> bool:
 	_rpc_set_tile_board.rpc_id(player_id, _encode_tile_board(_tile_board))
 	
 	for _player_id: int in _players:
-		var player_data: PlayerData = _players[_player_id]
+		var player_data: _PlayerData = _players[_player_id]
 		_rpc_set_player_name.rpc_id(player_id, _player_id, player_data.name)
 		_rpc_set_player_ready.rpc_id(player_id, _player_id, player_data.ready)
 		_rpc_set_player_spectator.rpc_id(player_id, _player_id, player_data.spectator)
@@ -183,11 +188,59 @@ func force_sync(player_id: int) -> bool:
 	
 	return true
 
+#region Instance
+
+var _instance_name: String = ""
+
+func get_instance_name() -> String:
+	return _instance_name
+
+func set_instance_name(instance_name: String) -> bool:
+	if !is_multiplayer_authority():
+		push_error("GameInstance \"%s\" | Failed to set instance name to '%s': only the authority can set instance name." % [self.name, instance_name])
+		return false
+	
+	_instance_name = instance_name
+	return true
+
+@rpc("authority", "call_remote", "reliable", 0)
+func _rpc_set_instance_name(instance_name: String) -> void:
+	_instance_name = instance_name
+	
+	updated.emit()
+
+var _instance_public: bool = false
+var _instance_password: String = ""
+
+func check_instance_password(instance_password: String) -> bool:
+	return _instance_password.is_empty() || (_instance_password == instance_password)
+
+func set_instance_password(instance_password: String) -> bool:
+	if !is_multiplayer_authority():
+		push_error("GameInstance \"%s\" | Failed to set instance password to '%s': only the authority can set instance password." % [self.name, instance_password])
+		return false
+	
+	_instance_password = instance_password
+	
+	if _instance_password.is_empty() != _instance_public:
+		_instance_public = !_instance_public
+		_rpc_set_instance_public.rpc(_instance_public)
+	
+	updated.emit()
+	return true
+
+@rpc("authority", "call_remote", "reliable", 0)
+func _rpc_set_instance_public(instance_public: bool) -> void:
+	_instance_public = instance_public
+	
+	updated.emit()
+
+#endregion
 #region Play
 
 func set_play(play: bool) -> bool:
 	if !is_multiplayer_authority():
-		push_error("GameInstance '<%s>' | Failed to set play to '%s': only the authority can set play." % [self.name, str(play)])
+		push_error("GameInstance \"%s\" | Failed to set play to '%s': only the authority can set play." % [self.name, str(play)])
 		return false
 	
 	if _play == play:
@@ -218,7 +271,7 @@ func get_turn_count() -> int:
 
 func set_turn_count(turn_count: int) -> bool:
 	if !is_multiplayer_authority():
-		push_error("GameInstance '<%s>' | Failed to set turn count to '%d': only the authority can set turn count." % [self.name, turn_count])
+		push_error("GameInstance \"%s\" | Failed to set turn count to '%d': only the authority can set turn count." % [self.name, turn_count])
 		return false
 	
 	if _turn_count == turn_count:
@@ -246,7 +299,7 @@ func get_turn_count_max() -> int:
 
 func set_turn_count_max(turn_count_max: int) -> bool:
 	if !is_multiplayer_authority():
-		push_error("GameInstance '<%s>' | Failed to set turn count max to '%d': only the authority can set turn count max." % [self.name, turn_count_max])
+		push_error("GameInstance \"%s\" | Failed to set turn count max to '%d': only the authority can set turn count max." % [self.name, turn_count_max])
 		return false
 	
 	if _turn_count_max == turn_count_max:
@@ -274,7 +327,7 @@ func get_turn_timer() -> float:
 
 func set_turn_timer(turn_timer: int) -> bool:
 	if !is_multiplayer_authority():
-		push_error("GameInstance '<%s>' | Failed to set turn timer to '%d': only the authority can set turn timer." % [self.name, turn_timer])
+		push_error("GameInstance \"%s\" | Failed to set turn timer to '%d': only the authority can set turn timer." % [self.name, turn_timer])
 		return false
 	
 	if _turn_timer == turn_timer:
@@ -300,7 +353,7 @@ func get_turn_timer_max() -> float:
 
 func set_turn_timer_max(turn_timer_max: int) -> bool:
 	if !is_multiplayer_authority():
-		push_error("GameInstance '<%s>' | Failed to set turn timer max to '%d': only the authority can set turn timer max." % [self.name, turn_timer_max])
+		push_error("GameInstance \"%s\" | Failed to set turn timer max to '%d': only the authority can set turn timer max." % [self.name, turn_timer_max])
 		return false
 	
 	if _turn_timer_max == turn_timer_max:
@@ -339,7 +392,7 @@ func get_tile_board() -> Dictionary[Vector2i, Tile]:
 
 func set_tile_board(tile_board: Dictionary[Vector2i, Tile]) -> bool:
 	if !is_multiplayer_authority():
-		push_error("GameInstance '<%s>' | Failed to set tile board: only the authority can set tile board." % [self.name])
+		push_error("GameInstance \"%s\" | Failed to set tile board: only the authority can set tile board." % [self.name])
 		return false
 	
 	_tile_board.clear()
@@ -362,7 +415,7 @@ func _rpc_set_tile_board(bytes: PackedByteArray) -> void:
 
 func clear_tile_board() -> bool:
 	if !is_multiplayer_authority():
-		push_error("GameInstance '<%s>' | Failed to clear tile board: only the authority can clear tile board." % [self.name])
+		push_error("GameInstance \"%s\" | Failed to clear tile board: only the authority can clear tile board." % [self.name])
 		return false
 	
 	_tile_board.clear()
@@ -382,11 +435,11 @@ func _rpc_clear_tile_board() -> void:
 
 func add_tile_board_tile(tile_position: Vector2i, tile: Tile) -> bool:
 	if !is_multiplayer_authority():
-		push_error("GameInstance '<%s>' | Failed to add tile board tile: only the authority can add tile board tile." % [self.name])
+		push_error("GameInstance \"%s\" | Failed to add tile board tile: only the authority can add tile board tile." % [self.name])
 		return false
 	
 	if _tile_board.has(tile_position):
-		push_error("GameInstance '<%s>' | Failed to add tile board tile: a tile already exists at (%d, %d)." % [self.name, tile_position.x, tile_position.y])
+		push_error("GameInstance \"%s\" | Failed to add tile board tile: a tile already exists at (%d, %d)." % [self.name, tile_position.x, tile_position.y])
 		return false
 	
 	_tile_board[tile_position] = tile.duplicate()
@@ -437,9 +490,15 @@ func get_tile_board_multiplier_word(tile_position: Vector2i) -> int:
 #region Player
 
 ## Hashmap of player IDs (multiplayer peer id) to player data.
-var _players: Dictionary[int, PlayerData] = {}
+var _players: Dictionary[int, _PlayerData] = {}
+
+func is_empty() -> bool:
+	return _players.is_empty()
 
 #region Player ID
+
+signal local_player_id_added()
+signal local_player_id_removed()
 
 func get_player_ids() -> Array[int]:
 	return _players.keys()
@@ -449,36 +508,42 @@ func has_player_id(player_id: int) -> bool:
 
 func add_player_id(player_id: int) -> bool:
 	if !is_multiplayer_authority():
-		push_error("GameInstance '<%s>' | Failed to add player ID '%d': only the authority can add player ID." % [self.name, player_id])
+		push_error("GameInstance \"%s\" | Failed to add player ID '%d': only the authority can add player ID." % [self.name, player_id])
 		return false
 	
 	if _players.has(player_id):
-		push_error("GameInstance '<%s>' | Failed to add player ID '%d': player ID already exists." % [self.name, player_id])
+		push_error("GameInstance \"%s\" | Failed to add player ID '%d': player ID already exists." % [self.name, player_id])
 		return false
 	
-	_players[player_id] = PlayerData.new()
+	_players[player_id] = _PlayerData.new()
 	
 	for _player_id: int in _players:
 		if _player_id != multiplayer.get_unique_id():
 			_rpc_add_player_id.rpc_id(_player_id, player_id)
 	
+	if player_id == multiplayer.get_unique_id():
+		local_player_id_added.emit()
 	updated.emit()
 	return true
 
 @rpc("authority", "call_remote", "reliable", 0)
 func _rpc_add_player_id(player_id: int) -> void:
-	if !_players.has(player_id):
-		_players[player_id] = PlayerData.new()
+	if _players.has(player_id):
+		return
 	
+	_players[player_id] = _PlayerData.new()
+	
+	if player_id == multiplayer.get_unique_id():
+		local_player_id_added.emit()
 	updated.emit()
 
 func remove_player_id(player_id: int) -> bool:
 	if !is_multiplayer_authority():
-		push_error("GameInstance '<%s>' | Failed to remove player ID '%d': only the authority can remove player ID." % [self.name, player_id])
+		push_error("GameInstance \"%s\" | Failed to remove player ID '%d': only the authority can remove player ID." % [self.name, player_id])
 		return false
 	
 	if !_players.has(player_id):
-		push_error("GameInstance '<%s>' | Failed to remove player ID '%d': player ID does not exist." % [self.name, player_id])
+		push_error("GameInstance \"%s\" | Failed to remove player ID '%d': player ID does not exist." % [self.name, player_id])
 		return false
 	
 	_players.erase(player_id)
@@ -487,13 +552,20 @@ func remove_player_id(player_id: int) -> bool:
 		if _player_id != multiplayer.get_unique_id():
 			_rpc_remove_player_id.rpc_id(_player_id, player_id)
 	
+	if player_id == multiplayer.get_unique_id():
+		local_player_id_removed.emit()
 	updated.emit()
 	return true
 
 @rpc("authority", "call_remote", "reliable", 0)
 func _rpc_remove_player_id(player_id: int) -> void:
+	if !_players.has(player_id):
+		return
+	
 	_players.erase(player_id)
 	
+	if player_id == multiplayer.get_unique_id():
+		local_player_id_removed.emit()
 	updated.emit()
 
 #endregion
@@ -501,29 +573,21 @@ func _rpc_remove_player_id(player_id: int) -> void:
 
 func get_player_name(player_id: int) -> String:
 	if !_players.has(player_id):
-		push_error("GameInstance '<%s>' | Failed to get player name for player ID '%d': could not find player ID." % [self.name, player_id])
+		push_error("GameInstance \"%s\" | Failed to get player name for player ID '%d': could not find player ID." % [self.name, player_id])
 		return ""
 	
 	return _players[player_id].name
 
 func set_player_name(player_id: int, player_name: String) -> bool:
-	if !is_multiplayer_authority() && (player_id != multiplayer.get_unique_id()):
-		push_error("GameInstance '<%s>' | Failed to set player name to '%s' for player ID '%d': only the authority can set remote player name." % [self.name, player_name, player_id])
+	if !is_multiplayer_authority():
+		push_error("GameInstance \"%s\" | Failed to set player name to '%s' for player ID '%d': only the authority can set player name." % [self.name, player_name, player_id])
 		return false
 	
 	if !_players.has(player_id):
-		push_error("GameInstance '<%s>' | Failed to set player name to '%s' for player ID '%d': could not find player ID." % [self.name, player_name, player_id])
+		push_error("GameInstance \"%s\" | Failed to set player name to '%s' for player ID '%d': could not find player ID." % [self.name, player_name, player_id])
 		return false
 	
 	if _players[player_id].name == player_name:
-		return true
-	
-	if !Game.is_valid_player_name(player_name):
-		push_error("GameInstance '<%s>' | Failed to set player name to '%s' for player ID '%d': player name is not valid." % [self.name, player_name, player_id])
-		return false
-	
-	if !is_multiplayer_authority():
-		_rpc_request_set_player_name.rpc_id(get_multiplayer_authority(), player_name)
 		return true
 	
 	_players[player_id].name = player_name
@@ -541,12 +605,6 @@ func _rpc_set_player_name(player_id: int, player_name: String) -> void:
 	
 	updated.emit()
 
-@rpc("any_peer", "call_remote", "reliable", 0)
-func _rpc_request_set_player_name(player_name: String) -> void:
-	var player_id: int = multiplayer.get_remote_sender_id()
-	if is_multiplayer_authority():
-		set_player_name(player_id, player_name)
-
 #endregion
 #region Player Ready
 
@@ -562,7 +620,7 @@ func get_all_players_ready() -> bool:
 
 func set_all_players_ready(player_ready: bool) -> bool:
 	if !is_multiplayer_authority():
-		push_error("GameInstance '<%s>' | Failed to set all players ready to '%s': only the authority can set all players ready." % [self.name, str(player_ready)])
+		push_error("GameInstance \"%s\" | Failed to set all players ready to '%s': only the authority can set all players ready." % [self.name, str(player_ready)])
 		return false
 	
 	for _player_id: int in _players:
@@ -582,25 +640,25 @@ func _rpc_set_all_players_ready(player_ready: bool) -> void:
 
 func get_player_ready(player_id: int) -> bool:
 	if !_players.has(player_id):
-		push_error("GameInstance '<%s>' | Failed to get player ready for player ID '%d': could not find player ID." % [self.name, player_id])
+		push_error("GameInstance \"%s\" | Failed to get player ready for player ID '%d': could not find player ID." % [self.name, player_id])
 		return false
 	
 	return _players[player_id].ready
 
 func set_player_ready(player_id: int, player_ready: bool) -> bool:
 	if !is_multiplayer_authority() && (player_id != multiplayer.get_unique_id()):
-		push_error("GameInstance '<%s>' | Failed to set player ready to '%s' for player ID '%d': only the authority can set remote player ready." % [self.name, player_ready, player_id])
+		push_error("GameInstance \"%s\" | Failed to set player ready to '%s' for player ID '%d': only the authority can set remote player ready." % [self.name, player_ready, player_id])
 		return false
 	
 	if !_players.has(player_id):
-		push_error("GameInstance '<%s>' | Failed to set player ready to '%s' for player ID '%d': could not find player ID." % [self.name, player_ready, player_id])
+		push_error("GameInstance \"%s\" | Failed to set player ready to '%s' for player ID '%d': could not find player ID." % [self.name, player_ready, player_id])
 		return false
 	
 	if _players[player_id].ready == player_ready:
 		return true
 	
 	if !is_multiplayer_authority():
-		_rpc_request_set_local_player_ready.rpc_id(get_multiplayer_authority(), player_ready)
+		_rpc_request_set_player_ready.rpc_id(get_multiplayer_authority(), player_ready)
 		return true
 	
 	_players[player_id].ready = player_ready
@@ -618,7 +676,7 @@ func _rpc_set_player_ready(player_id: int, player_ready: bool) -> void:
 	updated.emit()
 
 @rpc("any_peer", "call_remote", "reliable", 0)
-func _rpc_request_set_local_player_ready(player_ready: bool) -> void:
+func _rpc_request_set_player_ready(player_ready: bool) -> void:
 	var player_id: int = multiplayer.get_remote_sender_id()
 	if is_multiplayer_authority():
 		set_player_ready(player_id, player_ready)
@@ -628,18 +686,18 @@ func _rpc_request_set_local_player_ready(player_ready: bool) -> void:
 
 func get_player_spectator(player_id: int) -> bool:
 	if !_players.has(player_id):
-		push_error("GameInstance '<%s>' | Failed to get player spectator for player ID '%d': could not find player ID." % [self.name, player_id])
+		push_error("GameInstance \"%s\" | Failed to get player spectator for player ID '%d': could not find player ID." % [self.name, player_id])
 		return false
 	
 	return _players[player_id].spectator
 
 func set_player_spectator(player_id: int, player_spectator: bool) -> bool:
 	if !is_multiplayer_authority() && player_id != multiplayer.get_unique_id():
-		push_error("GameInstance '<%s>' | Failed to set player spectator to '%s' for player ID '%d': only the authority can set remote player spectator." % [self.name, player_spectator, player_id])
+		push_error("GameInstance \"%s\" | Failed to set player spectator to '%s' for player ID '%d': only the authority can set remote player spectator." % [self.name, player_spectator, player_id])
 		return false
 	
 	if !_players.has(player_id):
-		push_error("GameInstance '<%s>' | Failed to set player spectator to '%s' for player ID '%d': could not find player ID." % [self.name, player_spectator, player_id])
+		push_error("GameInstance \"%s\" | Failed to set player spectator to '%s' for player ID '%d': could not find player ID." % [self.name, player_spectator, player_id])
 		return false
 	
 	if _players[player_id].spectator == player_spectator:
@@ -685,7 +743,7 @@ func get_all_players_submitted() -> bool:
 
 func clear_all_players_submitted() -> bool:
 	if !is_multiplayer_authority():
-		push_error("GameInstance '<%s>' | Failed to clear all players submitted: only the authority can clear all players submitted." % [self.name])
+		push_error("GameInstance \"%s\" | Failed to clear all players submitted: only the authority can clear all players submitted." % [self.name])
 		return false
 	
 	for _player_id: int in _players:
@@ -705,18 +763,18 @@ func _rpc_clear_all_players_submitted() -> void:
 
 func get_player_submitted(player_id: int) -> bool:
 	if !_players.has(player_id):
-		push_error("GameInstance '<%s>' | Failed to get player submitted for player ID '%d': could not find player ID." % [self.name, player_id])
+		push_error("GameInstance \"%s\" | Failed to get player submitted for player ID '%d': could not find player ID." % [self.name, player_id])
 		return false
 	
 	return _players[player_id].submitted
 
 func set_player_submitted(player_id: int, player_submitted: bool) -> bool:
 	if !is_multiplayer_authority():
-		push_error("GameInstance '<%s>' | Failed to set player submitted to '%s' for player ID '%d': only the authority can set remote player submitted." % [self.name, player_submitted, player_id])
+		push_error("GameInstance \"%s\" | Failed to set player submitted to '%s' for player ID '%d': only the authority can set remote player submitted." % [self.name, player_submitted, player_id])
 		return false
 	
 	if !_players.has(player_id):
-		push_error("GameInstance '<%s>' | Failed to set player submitted to '%s' for player ID '%d': could not find player ID." % [self.name, player_submitted, player_id])
+		push_error("GameInstance \"%s\" | Failed to set player submitted to '%s' for player ID '%d': could not find player ID." % [self.name, player_submitted, player_id])
 		return false
 	
 	if _players[player_id].submitted == player_submitted:
@@ -742,7 +800,7 @@ func _rpc_set_player_submitted(player_id: int, player_submitted: bool) -> void:
 
 func clear_all_players_tiles() -> bool:
 	if !is_multiplayer_authority():
-		push_error("GameInstance '<%s>' | Failed to clear all players tiles: only the authority can clear all players tiles." % [self.name])
+		push_error("GameInstance \"%s\" | Failed to clear all players tiles: only the authority can clear all players tiles." % [self.name])
 		return false
 	
 	for _player_id: int in _players:
@@ -762,7 +820,7 @@ func _rpc_clear_all_players_tiles() -> void:
 
 func get_player_tiles(player_id: int) -> Array[Tile]:
 	if !_players.has(player_id):
-		push_error("GameInstance '<%s>' | Failed to get player tiles for player ID '%d': could not find player ID." % [self.name, player_id])
+		push_error("GameInstance \"%s\" | Failed to get player tiles for player ID '%d': could not find player ID." % [self.name, player_id])
 		return []
 	
 	var tiles: Array[Tile] = []
@@ -772,11 +830,11 @@ func get_player_tiles(player_id: int) -> Array[Tile]:
 
 func set_player_tiles(player_id: int, player_tiles: Array[Tile]) -> bool:
 	if !is_multiplayer_authority():
-		push_error("GameInstance '<%s>' | Failed to set player tiles to '%s' for player ID '%d': only the authority can set player tiles." % [self.name, str(player_tiles), player_id])
+		push_error("GameInstance \"%s\" | Failed to set player tiles to '%s' for player ID '%d': only the authority can set player tiles." % [self.name, str(player_tiles), player_id])
 		return false
 	
 	if !_players.has(player_id):
-		push_error("GameInstance '<%s>' | Failed to set player tiles to '%s' for player ID '%d': could not find player ID." % [self.name, str(player_tiles), player_id])
+		push_error("GameInstance \"%s\" | Failed to set player tiles to '%s' for player ID '%d': could not find player ID." % [self.name, str(player_tiles), player_id])
 		return false
 	
 	_players[player_id].tiles = player_tiles
@@ -799,7 +857,7 @@ func _rpc_set_player_tiles(player_id: int, bytes: PackedByteArray) -> void:
 
 func clear_all_players_points() -> bool:
 	if !is_multiplayer_authority():
-		push_error("GameInstance '<%s>' | Failed to clear all players points: only the authority can clear all players points." % [self.name])
+		push_error("GameInstance \"%s\" | Failed to clear all players points: only the authority can clear all players points." % [self.name])
 		return false
 	
 	for _player_id: int in _players:
@@ -819,18 +877,18 @@ func _rpc_clear_all_players_points() -> void:
 
 func get_player_points(player_id: int) -> int:
 	if !_players.has(player_id):
-		push_error("GameInstance '<%s>' | Failed to get player points for player ID '%d': could not find player ID." % [self.name, player_id])
+		push_error("GameInstance \"%s\" | Failed to get player points for player ID '%d': could not find player ID." % [self.name, player_id])
 		return -1
 	
 	return _players[player_id].points
 
 func set_player_points(player_id: int, player_points: int) -> bool:
 	if !is_multiplayer_authority():
-		push_error("GameInstance '<%s>' | Failed to set player points to '%s' for player ID '%d': only the authority can set player points." % [self.name, str(player_points), player_id])
+		push_error("GameInstance \"%s\" | Failed to set player points to '%s' for player ID '%d': only the authority can set player points." % [self.name, str(player_points), player_id])
 		return false
 	
 	if !_players.has(player_id):
-		push_error("GameInstance '<%s>' | Failed to set player points to '%s' for player ID '%d': could not find player ID." % [self.name, str(player_points), player_id])
+		push_error("GameInstance \"%s\" | Failed to set player points to '%s' for player ID '%d': could not find player ID." % [self.name, str(player_points), player_id])
 		return false
 	
 	if _players[player_id].points == player_points:
@@ -857,7 +915,7 @@ func _rpc_set_player_points(player_id: int, player_points: int) -> void:
 
 func get_player_place(player_id: int) -> int:
 	if !_players.has(player_id):
-		push_error("GameInstance '<%s>' | Failed to get player place for player ID '%d': could not find player ID." % [self.name, player_id])
+		push_error("GameInstance \"%s\" | Failed to get player place for player ID '%d': could not find player ID." % [self.name, player_id])
 		return -1
 	
 	return _players[player_id].place
@@ -1137,7 +1195,7 @@ func _physics_process(delta: float) -> void:
 	
 	# TODO: handle disconnections in game.gd (should free game instances)
 	if !multiplayer.has_multiplayer_peer():
-		push_error("GameInstance '<%s>' | Multiplayer is not active." % [self.name])
+		push_error("GameInstance \"%s\" | Multiplayer is not active." % [self.name])
 		get_tree().quit(1)# if this happens i am terrible programmer
 		return
 	
