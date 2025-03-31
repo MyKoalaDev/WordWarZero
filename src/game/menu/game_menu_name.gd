@@ -1,16 +1,14 @@
 @tool
 extends Control
 
-signal submitted(player_name: String)
+signal submitted_name(player_name: String)
 
-@onready
-var _color_rect: ColorRect = $color_rect as ColorRect
 @onready
 var _label_prompt: RichTextLabel = $label_prompt as RichTextLabel
 @onready
-var _line_edit: LineEdit = $line_edit as LineEdit
+var _line_edit: LineEdit = $v_box_container/line_edit as LineEdit
 @onready
-var _button_submit: Button = $button_submit as Button
+var _button_submit: Button = $v_box_container/button_submit as Button
 
 var _active: bool = false
 
@@ -35,7 +33,7 @@ func _ready() -> void:
 		_line_edit.release_focus()
 
 func _on_button_submit_pressed() -> void:
-	submitted.emit(_line_edit.text)
+	submitted_name.emit(_line_edit.text)
 
 var _tween: Tween = null
 
