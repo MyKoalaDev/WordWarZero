@@ -4,14 +4,16 @@ extends Control
 const TWEEN_IN_DURATION: float = 0.125
 const TWEEN_OUT_DURATION: float = 0.125
 
-signal submitted_name(player_name: String)
+signal submitted_host(port: int)
 
 @onready
 var _label_prompt: RichTextLabel = $label_prompt as RichTextLabel
 @onready
-var _line_edit_name: LineEdit = $v_box_container/line_edit as LineEdit
+var _line_edit_port: LineEdit = $v_box_container/line_edit_port as LineEdit
 @onready
-var _button_submit: Button = $v_box_container/button_submit as Button
+var _button_host: Button = $v_box_container/button_host as Button
+@onready
+var _button_back: Button = $v_box_container/button_back as Button
 
 @export
 var active: bool = false:
@@ -28,30 +30,36 @@ var _tween: Tween = null
 var _tween_value: float = 0.0
 
 func menu_grab_focus() -> void:
-	_line_edit_name.grab_focus()
+	_line_edit_port.grab_focus()
 
 func _ready() -> void:
 	if Engine.is_editor_hint():
 		return
 	
-	_button_submit.pressed.connect(submitted_name.emit.bind(_line_edit_name.text))
+	_button_host.pressed.connect(submitted_host.emit.bind(_line_edit_port.text))
 	
 	_update_enabled()
 	_update_tween_skipped()
 
 func _update_enabled() -> void:
 	if active:
-		_line_edit_name.focus_mode = Control.FOCUS_ALL
-		_line_edit_name.editable = true
+		_line_edit_port.focus_mode = Control.FOCUS_ALL
+		_line_edit_port.editable = true
 		
-		_button_submit.focus_mode = Control.FOCUS_ALL
-		_button_submit.disabled = false
+		_button_host.focus_mode = Control.FOCUS_ALL
+		_button_host.disabled = false
+		
+		_button_back.focus_mode = Control.FOCUS_ALL
+		_button_back.disabled = false
 	else:
-		_line_edit_name.focus_mode = Control.FOCUS_NONE
-		_line_edit_name.editable = false
+		_line_edit_port.focus_mode = Control.FOCUS_NONE
+		_line_edit_port.editable = false
 		
-		_button_submit.focus_mode = Control.FOCUS_NONE
-		_button_submit.disabled = true
+		_button_host.focus_mode = Control.FOCUS_NONE
+		_button_host.disabled = true
+		
+		_button_back.focus_mode = Control.FOCUS_NONE
+		_button_back.disabled = true
 
 func _update_tween() -> void:
 	if is_instance_valid(_tween) && _tween.is_valid():

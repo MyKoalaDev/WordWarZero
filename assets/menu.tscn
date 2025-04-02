@@ -1,11 +1,16 @@
-[gd_scene load_steps=7 format=3 uid="uid://dhlhhmwhrxbao"]
+[gd_scene load_steps=12 format=3 uid="uid://dhlhhmwhrxbao"]
 
 [ext_resource type="Script" uid="uid://bjlqbdwi0212t" path="res://src/game/menu/game_menu.gd" id="1_k10co"]
 [ext_resource type="Texture2D" uid="uid://bgp2rrk71wsts" path="res://assets/word_war.png" id="2_e3cln"]
 [ext_resource type="Script" uid="uid://c3kw8dcp5n65i" path="res://src/game/menu/game_menu_name.gd" id="3_coouj"]
 [ext_resource type="Texture2D" uid="uid://c251op0l3s2a2" path="res://assets/temp_gear.png" id="4_e3cln"]
+[ext_resource type="Script" uid="uid://cnpxeucl70w6l" path="res://src/game/menu/game_menu_home.gd" id="4_fnlly"]
+[ext_resource type="Script" uid="uid://c46pfu3c0t1i7" path="res://src/game/menu/game_menu_home_play_online.gd" id="4_xp533"]
 [ext_resource type="Texture2D" uid="uid://0tuyqbe0pl5o" path="res://assets/temp_sound_icon.png" id="5_coouj"]
+[ext_resource type="Script" uid="uid://c2lmna2xhbmt8" path="res://src/game/menu/game_menu_home_join_custom.gd" id="6_871h1"]
 [ext_resource type="Texture2D" uid="uid://bbfogacn6kwmx" path="res://assets/temp_music_icon.png" id="6_to4r7"]
+[ext_resource type="Script" uid="uid://dj70tefgqj46t" path="res://src/game/menu/game_menu_home_host_custom.gd" id="7_l1eme"]
+[ext_resource type="Script" uid="uid://cvpv4j7fu487k" path="res://src/game/menu/game_menu_settings.gd" id="8_wo62u"]
 
 [node name="menu" type="Control"]
 layout_mode = 3
@@ -23,7 +28,7 @@ anchor_right = 1.0
 anchor_bottom = 1.0
 grow_horizontal = 2
 grow_vertical = 2
-color = Color(0.599368, 0.539164, 0.512999, 1)
+color = Color(0.61916, 0.53326, 0.489253, 1)
 
 [node name="texture_rect" type="TextureRect" parent="."]
 layout_mode = 1
@@ -40,6 +45,7 @@ stretch_mode = 3
 
 [node name="menu_name" type="Control" parent="."]
 visible = false
+modulate = Color(1, 1, 1, 0)
 layout_mode = 1
 anchors_preset = 15
 anchor_right = 1.0
@@ -83,20 +89,25 @@ grow_horizontal = 2
 [node name="line_edit" type="LineEdit" parent="menu_name/v_box_container"]
 custom_minimum_size = Vector2(1024, 96)
 layout_mode = 2
+focus_mode = 0
 placeholder_text = "enter name"
 alignment = 1
 max_length = 20
+editable = false
 select_all_on_focus = true
 
 [node name="button_submit" type="Button" parent="menu_name/v_box_container"]
 custom_minimum_size = Vector2(512, 64)
 layout_mode = 2
 size_flags_horizontal = 4
+focus_mode = 0
 mouse_default_cursor_shape = 2
+disabled = true
 text = "Submit"
 
 [node name="menu_home" type="Control" parent="."]
 visible = false
+modulate = Color(1, 1, 1, 0)
 layout_mode = 1
 anchors_preset = 15
 anchor_right = 1.0
@@ -104,6 +115,7 @@ anchor_bottom = 1.0
 grow_horizontal = 2
 grow_vertical = 2
 mouse_filter = 2
+script = ExtResource("4_fnlly")
 
 [node name="v_box_container" type="VBoxContainer" parent="menu_home"]
 layout_mode = 1
@@ -118,14 +130,18 @@ grow_horizontal = 2
 custom_minimum_size = Vector2(512, 64)
 layout_mode = 2
 size_flags_vertical = 4
+focus_mode = 0
 mouse_default_cursor_shape = 2
+disabled = true
 text = "Play Online"
 
 [node name="button_play_offline" type="Button" parent="menu_home/v_box_container"]
 custom_minimum_size = Vector2(512, 64)
 layout_mode = 2
 size_flags_vertical = 4
+focus_mode = 0
 mouse_default_cursor_shape = 2
+disabled = true
 text = "Play Offline"
 
 [node name="button_quit" type="Button" parent="menu_home/v_box_container"]
@@ -135,8 +151,9 @@ size_flags_vertical = 4
 mouse_default_cursor_shape = 2
 text = "Quit"
 
-[node name="menu_home_online" type="Control" parent="."]
+[node name="menu_home_play_online" type="Control" parent="."]
 visible = false
+modulate = Color(1, 1, 1, 0)
 layout_mode = 1
 anchors_preset = 15
 anchor_right = 1.0
@@ -144,8 +161,9 @@ anchor_bottom = 1.0
 grow_horizontal = 2
 grow_vertical = 2
 mouse_filter = 2
+script = ExtResource("4_xp533")
 
-[node name="v_box_container" type="VBoxContainer" parent="menu_home_online"]
+[node name="v_box_container" type="VBoxContainer" parent="menu_home_play_online"]
 layout_mode = 1
 anchors_preset = -1
 anchor_left = 0.5
@@ -154,42 +172,52 @@ anchor_right = 0.5
 anchor_bottom = 0.5
 grow_horizontal = 2
 
-[node name="rich_text_label" type="RichTextLabel" parent="menu_home_online/v_box_container"]
+[node name="rich_text_label" type="RichTextLabel" parent="menu_home_play_online/v_box_container"]
 layout_mode = 2
 bbcode_enabled = true
 text = "- Play Online -"
 fit_content = true
 horizontal_alignment = 1
 
-[node name="button_join_official" type="Button" parent="menu_home_online/v_box_container"]
+[node name="button_join_official" type="Button" parent="menu_home_play_online/v_box_container"]
 custom_minimum_size = Vector2(512, 64)
 layout_mode = 2
 size_flags_vertical = 4
+focus_mode = 0
 mouse_default_cursor_shape = 2
+disabled = true
 text = "Join Official Server"
 
-[node name="button_join_custom" type="Button" parent="menu_home_online/v_box_container"]
+[node name="button_join_custom" type="Button" parent="menu_home_play_online/v_box_container"]
 custom_minimum_size = Vector2(512, 64)
 layout_mode = 2
 size_flags_vertical = 4
+focus_mode = 0
 mouse_default_cursor_shape = 2
+disabled = true
 text = "Join Custom Server"
 
-[node name="button_host_custom" type="Button" parent="menu_home_online/v_box_container"]
+[node name="button_host_custom" type="Button" parent="menu_home_play_online/v_box_container"]
 custom_minimum_size = Vector2(512, 64)
 layout_mode = 2
 size_flags_vertical = 4
+focus_mode = 0
 mouse_default_cursor_shape = 2
+disabled = true
 text = "Host Custom Server"
 
-[node name="button_back" type="Button" parent="menu_home_online/v_box_container"]
+[node name="button_back" type="Button" parent="menu_home_play_online/v_box_container"]
 custom_minimum_size = Vector2(512, 64)
 layout_mode = 2
 size_flags_vertical = 4
+focus_mode = 0
 mouse_default_cursor_shape = 2
+disabled = true
 text = "Back"
 
 [node name="menu_home_join_custom" type="Control" parent="."]
+visible = false
+modulate = Color(1, 1, 1, 0)
 layout_mode = 1
 anchors_preset = 15
 anchor_right = 1.0
@@ -197,6 +225,7 @@ anchor_bottom = 1.0
 grow_horizontal = 2
 grow_vertical = 2
 mouse_filter = 2
+script = ExtResource("6_871h1")
 
 [node name="v_box_container" type="VBoxContainer" parent="menu_home_join_custom"]
 layout_mode = 1
@@ -217,26 +246,33 @@ horizontal_alignment = 1
 [node name="line_edit_address" type="LineEdit" parent="menu_home_join_custom/v_box_container"]
 custom_minimum_size = Vector2(1024, 96)
 layout_mode = 2
+focus_mode = 0
 placeholder_text = "server address - default: 127.0.0.1:30666"
 alignment = 1
+editable = false
 select_all_on_focus = true
 
 [node name="button_join" type="Button" parent="menu_home_join_custom/v_box_container"]
 custom_minimum_size = Vector2(512, 64)
 layout_mode = 2
 size_flags_vertical = 4
+focus_mode = 0
 mouse_default_cursor_shape = 2
+disabled = true
 text = "Join"
 
 [node name="button_back" type="Button" parent="menu_home_join_custom/v_box_container"]
 custom_minimum_size = Vector2(512, 64)
 layout_mode = 2
 size_flags_vertical = 4
+focus_mode = 0
 mouse_default_cursor_shape = 2
+disabled = true
 text = "Back"
 
 [node name="menu_home_host_custom" type="Control" parent="."]
 visible = false
+modulate = Color(1, 1, 1, 0)
 layout_mode = 1
 anchors_preset = 15
 anchor_right = 1.0
@@ -244,6 +280,7 @@ anchor_bottom = 1.0
 grow_horizontal = 2
 grow_vertical = 2
 mouse_filter = 2
+script = ExtResource("7_l1eme")
 
 [node name="v_box_container" type="VBoxContainer" parent="menu_home_host_custom"]
 layout_mode = 1
@@ -264,22 +301,28 @@ horizontal_alignment = 1
 [node name="line_edit_port" type="LineEdit" parent="menu_home_host_custom/v_box_container"]
 custom_minimum_size = Vector2(1024, 96)
 layout_mode = 2
+focus_mode = 0
 placeholder_text = "custom port (default: 30666)"
 alignment = 1
+editable = false
 select_all_on_focus = true
 
 [node name="button_host" type="Button" parent="menu_home_host_custom/v_box_container"]
 custom_minimum_size = Vector2(512, 64)
 layout_mode = 2
 size_flags_vertical = 4
+focus_mode = 0
 mouse_default_cursor_shape = 2
+disabled = true
 text = "Host"
 
 [node name="button_back" type="Button" parent="menu_home_host_custom/v_box_container"]
 custom_minimum_size = Vector2(512, 64)
 layout_mode = 2
 size_flags_vertical = 4
+focus_mode = 0
 mouse_default_cursor_shape = 2
+disabled = true
 text = "Back"
 
 [node name="menu_settings" type="Control" parent="."]
@@ -287,10 +330,14 @@ layout_mode = 1
 anchors_preset = 15
 anchor_right = 1.0
 anchor_bottom = 1.0
+grow_horizontal = 2
+grow_vertical = 2
 mouse_filter = 2
+script = ExtResource("8_wo62u")
 
 [node name="color_rect" type="ColorRect" parent="menu_settings"]
 visible = false
+modulate = Color(1, 1, 1, 0)
 layout_mode = 1
 anchors_preset = -1
 anchor_right = 1.0
@@ -299,7 +346,7 @@ grow_horizontal = 2
 grow_vertical = 2
 color = Color(0, 0, 0, 0.25)
 
-[node name="texture_button_toggle" type="TextureButton" parent="menu_settings"]
+[node name="button_toggle" type="TextureButton" parent="menu_settings"]
 custom_minimum_size = Vector2(128, 128)
 layout_mode = 1
 anchors_preset = -1
@@ -310,6 +357,8 @@ ignore_texture_size = true
 stretch_mode = 4
 
 [node name="panel" type="Panel" parent="menu_settings"]
+visible = false
+modulate = Color(1, 1, 1, 0)
 custom_minimum_size = Vector2(640, 768)
 layout_mode = 1
 anchors_preset = -1
@@ -359,6 +408,7 @@ custom_minimum_size = Vector2(256, 64)
 layout_mode = 2
 size_flags_horizontal = 3
 size_flags_vertical = 4
+value = 25.0
 
 [node name="h_box_container_music" type="HBoxContainer" parent="menu_settings/panel/margin_container/v_box_container"]
 layout_mode = 2
@@ -375,19 +425,24 @@ custom_minimum_size = Vector2(256, 64)
 layout_mode = 2
 size_flags_horizontal = 3
 size_flags_vertical = 4
+value = 25.0
 
 [node name="button_resume" type="Button" parent="menu_settings/panel/margin_container/v_box_container"]
 custom_minimum_size = Vector2(512, 64)
 layout_mode = 2
 size_flags_horizontal = 4
 size_flags_vertical = 4
+focus_mode = 0
 mouse_default_cursor_shape = 2
+disabled = true
 text = "Resume"
 
-[node name="button_quit" type="Button" parent="menu_settings/panel/margin_container/v_box_container"]
+[node name="button_return" type="Button" parent="menu_settings/panel/margin_container/v_box_container"]
 custom_minimum_size = Vector2(512, 64)
 layout_mode = 2
 size_flags_horizontal = 4
 size_flags_vertical = 4
+focus_mode = 0
 mouse_default_cursor_shape = 2
-text = "Quit to Title"
+disabled = true
+text = "Return to Title"

@@ -4,14 +4,19 @@ extends Control
 const TWEEN_IN_DURATION: float = 0.125
 const TWEEN_OUT_DURATION: float = 0.125
 
-signal submitted_name(player_name: String)
+signal submitted_join_official()
+signal submitted_join_custom()
+signal submitted_host_custom()
+signal submitted_back()
 
 @onready
-var _label_prompt: RichTextLabel = $label_prompt as RichTextLabel
+var _button_join_official: Button = $v_box_container/button_join_official as Button
 @onready
-var _line_edit_name: LineEdit = $v_box_container/line_edit as LineEdit
+var _button_join_custom: Button = $v_box_container/button_join_custom as Button
 @onready
-var _button_submit: Button = $v_box_container/button_submit as Button
+var _button_host_custom: Button = $v_box_container/button_host_custom as Button
+@onready
+var _button_back: Button = $v_box_container/button_back as Button
 
 @export
 var active: bool = false:
@@ -28,30 +33,45 @@ var _tween: Tween = null
 var _tween_value: float = 0.0
 
 func menu_grab_focus() -> void:
-	_line_edit_name.grab_focus()
+	_button_join_official.grab_focus()
 
 func _ready() -> void:
 	if Engine.is_editor_hint():
 		return
 	
-	_button_submit.pressed.connect(submitted_name.emit.bind(_line_edit_name.text))
+	_button_join_official.pressed.connect(submitted_join_official.emit)
+	_button_join_custom.pressed.connect(submitted_join_custom.emit)
+	_button_host_custom.pressed.connect(submitted_host_custom.emit)
+	_button_back.pressed.connect(submitted_back.emit)
 	
 	_update_enabled()
 	_update_tween_skipped()
 
 func _update_enabled() -> void:
 	if active:
-		_line_edit_name.focus_mode = Control.FOCUS_ALL
-		_line_edit_name.editable = true
+		_button_join_official.focus_mode = Control.FOCUS_ALL
+		_button_join_official.disabled = false
 		
-		_button_submit.focus_mode = Control.FOCUS_ALL
-		_button_submit.disabled = false
+		_button_join_custom.focus_mode = Control.FOCUS_ALL
+		_button_join_custom.disabled = false
+		
+		_button_host_custom.focus_mode = Control.FOCUS_ALL
+		_button_host_custom.disabled = false
+		
+		_button_back.focus_mode = Control.FOCUS_ALL
+		_button_back.disabled = false
 	else:
-		_line_edit_name.focus_mode = Control.FOCUS_NONE
-		_line_edit_name.editable = false
+		_button_join_official.focus_mode = Control.FOCUS_NONE
+		_button_join_official.disabled = true
 		
-		_button_submit.focus_mode = Control.FOCUS_NONE
-		_button_submit.disabled = true
+		_button_join_custom.focus_mode = Control.FOCUS_NONE
+		_button_join_custom.disabled = true
+		
+		_button_host_custom.focus_mode = Control.FOCUS_NONE
+		_button_host_custom.disabled = true
+		
+		_button_back.focus_mode = Control.FOCUS_NONE
+		_button_back.disabled = true
 
 func _update_tween() -> void:
 	if is_instance_valid(_tween) && _tween.is_valid():
