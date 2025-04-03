@@ -5,6 +5,7 @@ const TWEEN_IN_DURATION: float = 0.125
 const TWEEN_OUT_DURATION: float = 0.125
 
 signal submitted_join(address: String)
+signal submitted_back()
 
 @onready
 var _label_prompt: RichTextLabel = $label_prompt as RichTextLabel
@@ -37,6 +38,7 @@ func _ready() -> void:
 		return
 	
 	_button_join.pressed.connect(submitted_join.emit.bind(_line_edit_address.text))
+	_button_back.pressed.connect(submitted_back.emit)
 	
 	_update_enabled()
 	_update_tween_skipped()

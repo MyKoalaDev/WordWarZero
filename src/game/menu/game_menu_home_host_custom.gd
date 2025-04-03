@@ -5,6 +5,7 @@ const TWEEN_IN_DURATION: float = 0.125
 const TWEEN_OUT_DURATION: float = 0.125
 
 signal submitted_host(port: int)
+signal submitted_back()
 
 @onready
 var _label_prompt: RichTextLabel = $label_prompt as RichTextLabel
