@@ -1,0 +1,70 @@
+[gd_scene load_steps=2 format=3 uid="uid://dugyqym3x3xa0"]
+
+[ext_resource type="Script" uid="uid://c3kw8dcp5n65i" path="res://src/game/menu/game_menu_name.gd" id="1_ka5ij"]
+
+[node name="game_menu_name" type="Control"]
+visible = false
+modulate = Color(1, 1, 1, 0)
+layout_mode = 3
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+grow_horizontal = 2
+grow_vertical = 2
+mouse_filter = 2
+script = ExtResource("1_ka5ij")
+tween_type = 1
+tween_in_duration = 0.125
+tween_out_duration = 0.125
+
+[node name="label_prompt" type="RichTextLabel" parent="."]
+custom_minimum_size = Vector2(512, 128)
+layout_mode = 1
+anchors_preset = -1
+anchor_top = 0.4
+anchor_right = 1.0
+anchor_bottom = 0.4
+grow_horizontal = 2
+grow_vertical = 2
+theme_override_font_sizes/bold_italics_font_size = 72
+theme_override_font_sizes/italics_font_size = 72
+theme_override_font_sizes/mono_font_size = 72
+theme_override_font_sizes/normal_font_size = 72
+theme_override_font_sizes/bold_font_size = 72
+text = "What's your Name?"
+fit_content = true
+scroll_active = false
+autowrap_mode = 0
+shortcut_keys_enabled = false
+horizontal_alignment = 1
+vertical_alignment = 1
+
+[node name="v_box_container" type="VBoxContainer" parent="."]
+layout_mode = 1
+anchors_preset = -1
+anchor_left = 0.5
+anchor_top = 0.5
+anchor_right = 0.5
+anchor_bottom = 0.5
+grow_horizontal = 2
+
+[node name="line_edit_name" type="LineEdit" parent="v_box_container"]
+unique_name_in_owner = true
+custom_minimum_size = Vector2(1024, 96)
+layout_mode = 2
+focus_mode = 0
+placeholder_text = "enter name"
+alignment = 1
+max_length = 20
+editable = false
+select_all_on_focus = true
+
+[node name="button_submit" type="Button" parent="v_box_container"]
+unique_name_in_owner = true
+custom_minimum_size = Vector2(512, 64)
+layout_mode = 2
+size_flags_horizontal = 4
+focus_mode = 0
+mouse_default_cursor_shape = 2
+disabled = true
+text = "Submit"

@@ -14,17 +14,16 @@ class_name Game
 
 enum State {
 	NONE,
-	NAME,
-	CONNECT,
-	CONNECTING,
-	HOME,
-	WAIT,
-	PLAY,
-	HEADLESS,
+	SERVER,
+	CLIENT,
+	OFFLINE,
 }
 
 const GameInstance: = preload("game_instance.gd")
+const GameMenu: = preload("menu/game_menu.gd")
 
+const DEFAULT_SERVER_PORT: int = 30666
+const OFFICIAL_SERVER_ADDRESS: String = "127.0.0.1:30666"
 const PLAYER_NAME_MAX_LENGTH: int = 16
 const DEFAULT_PLAYER_NAME: String = "Player"
 const INVALID_GAME_INSTANCE_ID: int = -1
@@ -32,14 +31,9 @@ const INVALID_GAME_INSTANCE_ID: int = -1
 @onready
 var _network: Network = $network as Network
 @onready
-var _game_instance_root: Node = $instances as Node
-
+var _game_instance_root: Node = $game_instances as Node
 @onready
-var _game_lobby: GameLobby = $game_lobby/game_lobby as GameLobby
-@onready
-var _game_board: GameBoard = $game_board/game_board as GameBoard
-
-var _state: State = State.NONE
+var _game_menu: GameMenu = $gui/game_menu as GameMenu
 
 ## Hashmap of game instance IDs to game instances.
 var _game_instances: Dictionary[int, GameInstance] = {}
@@ -299,29 +293,19 @@ func _rpc_request_quit_instance() -> void:
 		_game_instances[game_instance_id].remove_player_id(player_id)
 
 #endregion
+#endregion
+
+var _state: State = State.NONE
 
 func _set_state(state: State) -> void:
 	if _state == state:
 		return
 	_state = state
 	
-	match _state:
-		State.NONE:
-			pass
-		State.NAME:
-			pass
-		State.CONNECT:
-			pass
-		State.CONNECTING:
-			pass
-		State.HOME:
-			pass
-		State.WAIT:
-			pass
-		State.PLAY:
-			pass
-		State.HEADLESS:
-			pass
+	#match _state:
+
+func get_state() -> State:
+	return _state
 
 func _ready() -> void:
 	if Engine.is_editor_hint():
@@ -331,6 +315,20 @@ func _ready() -> void:
 	multiplayer.peer_disconnected.connect(_on_multiplayer_peer_disconnected)
 	multiplayer.connected_to_server.connect(_on_multiplayer_server_connected)
 	multiplayer.server_disconnected.connect(_on_multiplayer_server_disconnected)
+	
+	if DisplayServer.get_name() == "headless":
+		if _network.host_server():
+			_state = State.SERVER
+			var game_instance_id: int = create_instance()
+			_game_instances[game_instance_id].persistent = true
+			# TODO:
+		else:
+			# TODO:
+			get_tree().quit(1)
+	else:
+		pass
+
+#region Multiplayer Callbacks
 
 func _on_multiplayer_peer_connected(player_id: int) -> void:
 	if !_players.has(player_id):
@@ -353,17 +351,24 @@ func _on_multiplayer_server_disconnected() -> void:
 	_game_instances.clear()
 	_local_player_game_instance_id = INVALID_GAME_INSTANCE_ID
 
+#endregion
+#region Game Menu Callbacks
+
+#endregion
+
+func start_server(port: int = 0) -> void:
+	pass
+
+func start_server_offline() -> void:
+	pass
+
+func start_client() -> void:
+	pass
+
 var connect_auto: bool = false
 var _connect_auto: bool = false
 
-var _name_submitted: bool = false
 
-var _connect_submitted_host_offline: bool = false
-var _connect_submitted_host_online: bool = false
-var _connect_submitted_join: bool = false
-
-var _home_submitted_join_instance: bool = false
-var _home_submitted_join_instance_id: int = INVALID_GAME_INSTANCE_ID
 
 func _physics_process(delta: float) -> void:
 	if Engine.is_editor_hint():
@@ -377,23 +382,6 @@ func _physics_process(delta: float) -> void:
 				remove_instance(game_instance_id)
 	
 	match _state:
-		State.NONE:
-			if DisplayServer.get_name() == "headless":
-				if _network.host_server():
-					_set_state(State.HEADLESS)
-					var game_instance_id: int = create_instance()
-					_game_instances[game_instance_id].persistent = true
-				else:
-					# TODO:
-					get_tree().quit(1)
-			else:
-				_set_state(State.NAME)
-		State.NAME:
-			pass
-			# TODO: on name submit, check if valid. if valid,
-			if true:
-				pass
-				_set_state(State.CONNECT)
 		State.CONNECT:
 			# TODO: on connect to server:
 			if _connect_submitted_host_offline:

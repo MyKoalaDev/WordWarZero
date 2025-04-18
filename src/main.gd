@@ -30,9 +30,6 @@ enum State {
 var _state: State = State.SPLASH
 
 @onready
-var _menu_config: MenuConfig = $gui/menu_config as MenuConfig
-
-@onready
 var _game: Game = $game as Game
 
 const TIMEOUT: float = 300.0
@@ -43,9 +40,6 @@ var _unsafe: bool = false
 func _ready() -> void:
 	if Engine.is_editor_hint():
 		return
-	
-	_menu_config.network_host_request.connect(_on_menu_config_network_host_request)
-	_menu_config.network_join_request.connect(_on_menu_config_network_join_request)
 	
 	# Process command line arguments.
 	var args: Dictionary[String, String] = {}

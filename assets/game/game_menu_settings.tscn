@@ -1,0 +1,135 @@
+[gd_scene load_steps=5 format=3 uid="uid://ecvddaovrcx2"]
+
+[ext_resource type="Script" uid="uid://cvpv4j7fu487k" path="res://src/game/menu/game_menu_settings.gd" id="1_pqsr8"]
+[ext_resource type="Texture2D" uid="uid://0tuyqbe0pl5o" path="res://assets/temp_sound_icon.png" id="2_42s7u"]
+[ext_resource type="Texture2D" uid="uid://bbfogacn6kwmx" path="res://assets/temp_music_icon.png" id="3_bwil7"]
+[ext_resource type="Texture2D" uid="uid://c251op0l3s2a2" path="res://assets/temp_gear.png" id="4_42s7u"]
+
+[node name="game_menu_settings" type="Control" node_paths=PackedStringArray("custom_tween_target")]
+layout_mode = 3
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+grow_horizontal = 2
+grow_vertical = 2
+mouse_filter = 2
+script = ExtResource("1_pqsr8")
+custom_tween_target = NodePath("control")
+tween_type = 2
+tween_in_duration = 0.125
+tween_out_duration = 0.125
+
+[node name="color_rect" type="ColorRect" parent="."]
+unique_name_in_owner = true
+visible = false
+modulate = Color(1, 1, 1, 0)
+layout_mode = 1
+anchors_preset = -1
+anchor_right = 1.0
+anchor_bottom = 1.0
+grow_horizontal = 2
+grow_vertical = 2
+color = Color(0, 0, 0, 0.25)
+
+[node name="control" type="Control" parent="."]
+visible = false
+layout_mode = 1
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+offset_top = 1080.0
+offset_bottom = 1080.0
+grow_horizontal = 2
+grow_vertical = 2
+
+[node name="panel_container" type="PanelContainer" parent="control"]
+layout_mode = 1
+anchors_preset = -1
+anchor_left = 0.5
+anchor_top = 0.5
+anchor_right = 0.5
+anchor_bottom = 0.5
+grow_horizontal = 2
+grow_vertical = 2
+
+[node name="v_box_container" type="VBoxContainer" parent="control/panel_container"]
+layout_mode = 2
+alignment = 1
+
+[node name="rich_text_label" type="RichTextLabel" parent="control/panel_container/v_box_container"]
+custom_minimum_size = Vector2(0, 96)
+layout_mode = 2
+bbcode_enabled = true
+text = "- Settings -"
+fit_content = true
+horizontal_alignment = 1
+vertical_alignment = 1
+
+[node name="h_box_container_sound" type="HBoxContainer" parent="control/panel_container/v_box_container"]
+layout_mode = 2
+
+[node name="texture_button_sound" type="TextureButton" parent="control/panel_container/v_box_container/h_box_container_sound"]
+unique_name_in_owner = true
+custom_minimum_size = Vector2(128, 128)
+layout_mode = 2
+mouse_default_cursor_shape = 2
+texture_normal = ExtResource("2_42s7u")
+ignore_texture_size = true
+stretch_mode = 4
+
+[node name="h_slider_sound" type="HSlider" parent="control/panel_container/v_box_container/h_box_container_sound"]
+unique_name_in_owner = true
+custom_minimum_size = Vector2(256, 64)
+layout_mode = 2
+size_flags_horizontal = 3
+size_flags_vertical = 4
+mouse_default_cursor_shape = 2
+max_value = 1.0
+step = 0.0
+value = 0.2
+
+[node name="h_box_container_music" type="HBoxContainer" parent="control/panel_container/v_box_container"]
+layout_mode = 2
+
+[node name="texture_button_music" type="TextureButton" parent="control/panel_container/v_box_container/h_box_container_music"]
+unique_name_in_owner = true
+custom_minimum_size = Vector2(128, 128)
+layout_mode = 2
+mouse_default_cursor_shape = 2
+texture_normal = ExtResource("3_bwil7")
+ignore_texture_size = true
+stretch_mode = 4
+
+[node name="h_slider_music" type="HSlider" parent="control/panel_container/v_box_container/h_box_container_music"]
+unique_name_in_owner = true
+custom_minimum_size = Vector2(256, 64)
+layout_mode = 2
+size_flags_horizontal = 3
+size_flags_vertical = 4
+mouse_default_cursor_shape = 2
+max_value = 1.0
+step = 0.0
+value = 0.2
+
+[node name="button_resume" type="Button" parent="control/panel_container/v_box_container"]
+unique_name_in_owner = true
+custom_minimum_size = Vector2(512, 64)
+layout_mode = 2
+size_flags_horizontal = 4
+size_flags_vertical = 4
+focus_mode = 0
+mouse_default_cursor_shape = 2
+disabled = true
+text = "Resume"
+
+[node name="texture_button_open" type="TextureButton" parent="."]
+unique_name_in_owner = true
+custom_minimum_size = Vector2(128, 128)
+layout_mode = 1
+anchors_preset = -1
+offset_right = 128.0
+offset_bottom = 128.0
+mouse_default_cursor_shape = 2
+texture_normal = ExtResource("4_42s7u")
+ignore_texture_size = true
+stretch_mode = 4

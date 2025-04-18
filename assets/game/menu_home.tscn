@@ -1,0 +1,34 @@
+[gd_scene load_steps=6 format=3 uid="uid://bd7nkncx8fmeh"]
+
+[ext_resource type="Script" uid="uid://cnpxeucl70w6l" path="res://src/game/menu/game_menu_home.gd" id="1_dpfcp"]
+[ext_resource type="PackedScene" uid="uid://wodgobp566im" path="res://assets/game/game_menu_home_title.tscn" id="2_pfrcq"]
+[ext_resource type="PackedScene" uid="uid://btl8cdx82fheu" path="res://assets/game/game_menu_home_play_online.tscn" id="3_pfrcq"]
+[ext_resource type="PackedScene" uid="uid://dc4jkviemalwj" path="res://assets/game/game_menu_home_join_custom.tscn" id="4_630d5"]
+[ext_resource type="PackedScene" uid="uid://xleqj8wdunal" path="res://assets/game/game_menu_home_host_custom.tscn" id="5_sdam2"]
+
+[node name="game_menu_home" type="Control"]
+visible = false
+modulate = Color(1, 1, 1, 0)
+layout_mode = 3
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+grow_horizontal = 2
+grow_vertical = 2
+mouse_filter = 2
+script = ExtResource("1_dpfcp")
+tween_type = 1
+tween_in_duration = 0.125
+tween_out_duration = 0.125
+
+[node name="game_menu_home_title" parent="." instance=ExtResource("2_pfrcq")]
+layout_mode = 1
+
+[node name="game_menu_home_play_online" parent="." instance=ExtResource("3_pfrcq")]
+layout_mode = 1
+
+[node name="game_menu_home_join_custom" parent="." instance=ExtResource("4_630d5")]
+layout_mode = 1
+
+[node name="game_menu_home_host_custom" parent="." instance=ExtResource("5_sdam2")]
+layout_mode = 1

@@ -1,0 +1,65 @@
+[gd_scene format=3 uid="uid://bgb83vb1a36q7"]
+
+[node name="game_menu_list_instance" type="Panel"]
+custom_minimum_size = Vector2(256, 160)
+offset_right = 512.0
+offset_bottom = 160.0
+size_flags_horizontal = 3
+
+[node name="margin_container" type="MarginContainer" parent="."]
+layout_mode = 1
+anchors_preset = -1
+anchor_right = 1.0
+anchor_bottom = 1.0
+theme_override_constants/margin_left = 16
+theme_override_constants/margin_top = 16
+theme_override_constants/margin_right = 16
+theme_override_constants/margin_bottom = 16
+
+[node name="h_box_container" type="HBoxContainer" parent="margin_container"]
+layout_mode = 2
+
+[node name="v_box_container" type="VBoxContainer" parent="margin_container/h_box_container"]
+layout_mode = 2
+size_flags_horizontal = 3
+theme_override_constants/separation = 0
+
+[node name="label_title" type="RichTextLabel" parent="margin_container/h_box_container/v_box_container"]
+custom_minimum_size = Vector2(128, 48)
+layout_mode = 2
+size_flags_horizontal = 3
+size_flags_vertical = 3
+theme_override_font_sizes/bold_italics_font_size = 40
+theme_override_font_sizes/italics_font_size = 40
+theme_override_font_sizes/mono_font_size = 40
+theme_override_font_sizes/normal_font_size = 40
+theme_override_font_sizes/bold_font_size = 40
+bbcode_enabled = true
+text = "Game Title"
+scroll_active = false
+autowrap_mode = 0
+vertical_alignment = 1
+
+[node name="label_status" type="RichTextLabel" parent="margin_container/h_box_container/v_box_container"]
+custom_minimum_size = Vector2(128, 48)
+layout_mode = 2
+size_flags_horizontal = 3
+size_flags_vertical = 3
+theme_override_font_sizes/bold_italics_font_size = 40
+theme_override_font_sizes/italics_font_size = 40
+theme_override_font_sizes/mono_font_size = 40
+theme_override_font_sizes/normal_font_size = 40
+theme_override_font_sizes/bold_font_size = 40
+bbcode_enabled = true
+text = "4 Players | [color=green]Waiting[/color]"
+scroll_active = false
+autowrap_mode = 0
+vertical_alignment = 1
+
+[node name="button_join" type="Button" parent="margin_container/h_box_container"]
+custom_minimum_size = Vector2(128, 32)
+layout_mode = 2
+size_flags_horizontal = 8
+size_flags_vertical = 4
+mouse_default_cursor_shape = 2
+text = "Join"

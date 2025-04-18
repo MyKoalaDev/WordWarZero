@@ -1,10 +1,10 @@
-[gd_scene load_steps=21 format=4 uid="uid://nw2kb71xa2db"]
+[gd_scene load_steps=20 format=4 uid="uid://nw2kb71xa2db"]
 
 [ext_resource type="Script" uid="uid://lljyxnqqax7l" path="res://src/main.gd" id="1_db5cl"]
 [ext_resource type="TileSet" uid="uid://cyojl6rec7r5t" path="res://assets/board.tres" id="2_06ig3"]
 [ext_resource type="Script" uid="uid://c6hl88o0btr7v" path="res://src/game/game.gd" id="2_fphxj"]
 [ext_resource type="Script" uid="uid://jn8a64othr63" path="res://assets/game_camera.gd" id="2_j2eim"]
-[ext_resource type="PackedScene" uid="uid://dhlhhmwhrxbao" path="res://assets/menu.tscn" id="3_2rvxm"]
+[ext_resource type="PackedScene" uid="uid://dhlhhmwhrxbao" path="res://assets/game/game_menu.tscn" id="3_2rvxm"]
 [ext_resource type="Script" uid="uid://b070kcr60nwxj" path="res://src/game/game_lobby.gd" id="5_ew6cl"]
 [ext_resource type="Script" uid="uid://b2ot00vang7bj" path="res://src/tile/tile_board_2d.gd" id="5_m5usj"]
 [ext_resource type="Texture2D" uid="uid://bgp2rrk71wsts" path="res://assets/word_war.png" id="6_ew6cl"]
@@ -15,7 +15,6 @@
 [ext_resource type="Script" uid="uid://df4jdhw4qtqix" path="res://src/game/game_lobby_ready.gd" id="8_ul5qt"]
 [ext_resource type="Script" uid="uid://ct314rl61mc55" path="res://src/game/game_results.gd" id="10_2rvxm"]
 [ext_resource type="PackedScene" uid="uid://cfmdrd7ailidu" path="res://assets/confetti.tscn" id="11_6eca0"]
-[ext_resource type="Script" uid="uid://dev6hqla35dfo" path="res://src/menu_config.gd" id="11_vvw4a"]
 [ext_resource type="Texture2D" uid="uid://b3v7wg38eg8e3" path="res://assets/board.png" id="12_h4xlo"]
 [ext_resource type="Script" uid="uid://dv4dir2oybjfm" path="res://src/game/game_leaderboard.gd" id="13_ew6cl"]
 [ext_resource type="Script" uid="uid://d0owujx51evto" path="res://src/tile_map_layer_data.gd" id="16_2rvxm"]
@@ -30,18 +29,18 @@ script = ExtResource("1_db5cl")
 [node name="game" type="Node" parent="."]
 script = ExtResource("2_fphxj")
 
+[node name="network" type="Node" parent="game"]
+script = ExtResource("6_ujfqy")
+metadata/_custom_type_script = "uid://b3eo1vdw04anx"
+
+[node name="game_instances" type="Node" parent="game"]
+
 [node name="play" type="Node2D" parent="game"]
 
 [node name="gui" type="CanvasLayer" parent="game"]
 visible = false
 
-[node name="menu" parent="game/gui" instance=ExtResource("3_2rvxm")]
-
-[node name="network" type="Node" parent="game"]
-script = ExtResource("6_ujfqy")
-metadata/_custom_type_script = "uid://b3eo1vdw04anx"
-
-[node name="instances" type="Node" parent="game"]
+[node name="game_menu" parent="game/gui" instance=ExtResource("3_2rvxm")]
 
 [node name="game_wait" type="CanvasLayer" parent="game"]
 layer = 16
@@ -414,98 +413,3 @@ vertical_alignment = 1
 [node name="tile_drag_layer" type="CanvasLayer" parent="game/game_play/game_board"]
 layer = 6
 follow_viewport_enabled = true
-
-[node name="gui" type="CanvasLayer" parent="."]
-layer = 32
-visible = false
-
-[node name="menu_config" type="Control" parent="gui"]
-layout_mode = 3
-anchors_preset = 15
-anchor_right = 1.0
-anchor_bottom = 1.0
-grow_horizontal = 2
-grow_vertical = 2
-mouse_filter = 2
-script = ExtResource("11_vvw4a")
-
-[node name="color_rect" type="ColorRect" parent="gui/menu_config"]
-layout_mode = 1
-anchors_preset = 15
-anchor_right = 1.0
-anchor_bottom = 1.0
-grow_horizontal = 2
-grow_vertical = 2
-color = Color(0.623331, 0.594586, 0.585371, 1)
-
-[node name="network" type="Control" parent="gui/menu_config"]
-layout_mode = 1
-anchors_preset = 15
-anchor_right = 1.0
-anchor_bottom = 1.0
-grow_horizontal = 2
-grow_vertical = 2
-
-[node name="label_status" type="Label" parent="gui/menu_config/network"]
-layout_mode = 1
-anchors_preset = 14
-anchor_top = 0.5
-anchor_right = 1.0
-anchor_bottom = 0.5
-offset_top = -230.54
-offset_bottom = -185.54
-grow_horizontal = 2
-grow_vertical = 2
-theme_override_font_sizes/font_size = 64
-text = "Status"
-horizontal_alignment = 1
-vertical_alignment = 1
-
-[node name="v_box_container" type="VBoxContainer" parent="gui/menu_config/network"]
-clip_contents = true
-layout_mode = 1
-anchors_preset = -1
-anchor_left = 0.25
-anchor_top = 0.5
-anchor_right = 0.75
-anchor_bottom = 0.75
-grow_horizontal = 2
-grow_vertical = 2
-alignment = 1
-
-[node name="address" type="VBoxContainer" parent="gui/menu_config/network/v_box_container"]
-layout_mode = 2
-theme_override_constants/separation = 4
-
-[node name="label_address" type="Label" parent="gui/menu_config/network/v_box_container/address"]
-layout_mode = 2
-text = "Server Address:"
-
-[node name="line_edit_address" type="LineEdit" parent="gui/menu_config/network/v_box_container/address"]
-layout_mode = 2
-placeholder_text = "Address"
-context_menu_enabled = false
-emoji_menu_enabled = false
-
-[node name="port" type="VBoxContainer" parent="gui/menu_config/network/v_box_container"]
-layout_mode = 2
-theme_override_constants/separation = 4
-
-[node name="label_port" type="Label" parent="gui/menu_config/network/v_box_container/port"]
-layout_mode = 2
-text = "Server Port:"
-
-[node name="line_edit_port" type="LineEdit" parent="gui/menu_config/network/v_box_container/port"]
-layout_mode = 2
-placeholder_text = "Port (default: 43517)"
-max_length = 10
-context_menu_enabled = false
-emoji_menu_enabled = false
-
-[node name="button_host" type="Button" parent="gui/menu_config/network/v_box_container"]
-layout_mode = 2
-text = "Host Server"
-
-[node name="button_join" type="Button" parent="gui/menu_config/network/v_box_container"]
-layout_mode = 2
-text = "Join Server"

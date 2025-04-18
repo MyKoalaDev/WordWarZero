@@ -1,0 +1,51 @@
+[gd_scene load_steps=7 format=3 uid="uid://dhlhhmwhrxbao"]
+
+[ext_resource type="Script" uid="uid://cwdid3leihnqf" path="res://src/game/menu/game_menu.gd" id="1_kr3do"]
+[ext_resource type="Texture2D" uid="uid://bgp2rrk71wsts" path="res://assets/word_war.png" id="2_e3cln"]
+[ext_resource type="PackedScene" uid="uid://dugyqym3x3xa0" path="res://assets/game/game_menu_name.tscn" id="2_m6oyd"]
+[ext_resource type="PackedScene" uid="uid://bd7nkncx8fmeh" path="res://assets/game/menu_home.tscn" id="3_m6oyd"]
+[ext_resource type="PackedScene" uid="uid://bypq5saa86o5w" path="res://assets/game/game_menu_list.tscn" id="8_28e6x"]
+[ext_resource type="PackedScene" uid="uid://ecvddaovrcx2" path="res://assets/game/game_menu_settings.tscn" id="8_bp8qt"]
+
+[node name="game_menu" type="Control"]
+layout_mode = 3
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+grow_horizontal = 2
+grow_vertical = 2
+script = ExtResource("1_kr3do")
+
+[node name="color_rect" type="ColorRect" parent="."]
+layout_mode = 1
+anchors_preset = -1
+anchor_right = 1.0
+anchor_bottom = 1.0
+grow_horizontal = 2
+grow_vertical = 2
+color = Color(0.61916, 0.53326, 0.489253, 1)
+
+[node name="texture_rect" type="TextureRect" parent="."]
+layout_mode = 1
+anchors_preset = -1
+anchor_right = 1.0
+anchor_bottom = 1.0
+offset_top = -349.0
+offset_bottom = -349.0
+grow_horizontal = 2
+scale = Vector2(0.5, 0.5)
+pivot_offset = Vector2(960, 540)
+texture = ExtResource("2_e3cln")
+stretch_mode = 3
+
+[node name="game_menu_name" parent="." instance=ExtResource("2_m6oyd")]
+layout_mode = 1
+
+[node name="game_menu_home" parent="." instance=ExtResource("3_m6oyd")]
+layout_mode = 1
+
+[node name="game_menu_list" parent="." instance=ExtResource("8_28e6x")]
+layout_mode = 1
+
+[node name="game_menu_settings" parent="." instance=ExtResource("8_bp8qt")]
+layout_mode = 1

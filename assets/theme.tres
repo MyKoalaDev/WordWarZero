@@ -1,4 +1,4 @@
-[gd_resource type="Theme" load_steps=24 format=3 uid="uid://dl5kok5wd56ae"]
+[gd_resource type="Theme" load_steps=26 format=3 uid="uid://dl5kok5wd56ae"]
 
 [ext_resource type="FontFile" uid="uid://hgigr2r14cr4" path="res://assets/fredoka-one.one-regular.ttf" id="1_5x3i2"]
 
@@ -169,10 +169,50 @@ corner_radius_bottom_right = 16
 corner_radius_bottom_left = 16
 
 [sub_resource type="StyleBoxFlat" id="StyleBoxFlat_e1x85"]
-content_margin_left = 16.0
-content_margin_top = 16.0
-content_margin_right = 16.0
-content_margin_bottom = 16.0
+content_margin_left = 32.0
+content_margin_top = 32.0
+content_margin_right = 32.0
+content_margin_bottom = 32.0
+bg_color = Color(0.786619, 0.5841, 0.513853, 1)
+border_width_left = 8
+border_width_top = 8
+border_width_right = 8
+border_width_bottom = 8
+border_color = Color(0.367062, 0.275895, 0.288764, 1)
+corner_radius_top_left = 8
+corner_radius_top_right = 8
+corner_radius_bottom_right = 8
+corner_radius_bottom_left = 8
+corner_detail = 4
+shadow_color = Color(0, 0, 0, 0.192157)
+shadow_size = 4
+shadow_offset = Vector2(0, 4)
+
+[sub_resource type="StyleBoxFlat" id="StyleBoxFlat_21go2"]
+content_margin_left = 32.0
+content_margin_top = 32.0
+content_margin_right = 32.0
+content_margin_bottom = 32.0
+bg_color = Color(0.560784, 0.494118, 0.466667, 1)
+border_width_left = 8
+border_width_top = 8
+border_width_right = 8
+border_width_bottom = 8
+border_color = Color(0.367062, 0.275895, 0.288764, 1)
+corner_radius_top_left = 8
+corner_radius_top_right = 8
+corner_radius_bottom_right = 8
+corner_radius_bottom_left = 8
+corner_detail = 4
+shadow_color = Color(0, 0, 0, 0.192157)
+shadow_size = 4
+shadow_offset = Vector2(0, 4)
+
+[sub_resource type="StyleBoxFlat" id="StyleBoxFlat_7g2p0"]
+content_margin_left = 32.0
+content_margin_top = 32.0
+content_margin_right = 32.0
+content_margin_bottom = 32.0
 bg_color = Color(0.786619, 0.5841, 0.513853, 1)
 border_width_left = 8
 border_width_top = 8
@@ -242,7 +282,14 @@ LineEdit/font_sizes/font_size = 40
 LineEdit/styles/focus = SubResource("StyleBoxFlat_wl1kw")
 LineEdit/styles/normal = SubResource("StyleBoxFlat_5x3i2")
 LineEdit/styles/read_only = SubResource("StyleBoxFlat_lu33j")
+MarginContainer/constants/margin_bottom = 32
+MarginContainer/constants/margin_left = 32
+MarginContainer/constants/margin_right = 32
+MarginContainer/constants/margin_top = 32
 Panel/styles/panel = SubResource("StyleBoxFlat_e1x85")
+PanelAlt/base_type = &"Panel"
+PanelAlt/styles/panel = SubResource("StyleBoxFlat_21go2")
+PanelContainer/styles/panel = SubResource("StyleBoxFlat_7g2p0")
 RichTextLabel/colors/default_color = Color(0.953259, 0.941821, 0.920853, 1)
 RichTextLabel/colors/font_shadow_color = Color(0.103735, 0.0184052, 0.0182676, 0.5)
 RichTextLabel/constants/shadow_offset_x = 2
