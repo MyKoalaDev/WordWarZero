@@ -10,7 +10,7 @@ config_version=5
 
 [application]
 
-config/name="CSS436 - Final Project"
+config/name="Hexical"
 run/main_scene="uid://nw2kb71xa2db"
 config/features=PackedStringArray("4.4", "GL Compatibility")
 
