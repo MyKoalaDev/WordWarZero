@@ -19,7 +19,7 @@ enum State {
 	OFFLINE,
 }
 
-const GameInstance: = preload("game_instance.gd")
+const GameInstance: = preload("instance/game_instance.gd")
 const GameMenu: = preload("menu/game_menu.gd")
 
 const DEFAULT_SERVER_PORT: int = 30666
@@ -38,22 +38,6 @@ var _game_menu: GameMenu = $gui/game_menu as GameMenu
 ## Hashmap of game instance IDs to game instances.
 var _game_instances: Dictionary[int, GameInstance] = {}
 
-#region Player
-
-class _PlayerData:
-	extends RefCounted
-	var player_name: String = DEFAULT_PLAYER_NAME
-	var player_name_set: bool = false
-	var player_color: Color = Color.WHITE
-	var player_game_instance_id: int = INVALID_GAME_INSTANCE_ID
-
-## Hashmap of player IDs to player data (Server only).
-var _players: Dictionary[int, _PlayerData] = {}
-
-var _local_player_name: String = DEFAULT_PLAYER_NAME
-var _local_player_color: Color = Color.WHITE
-var _local_player_game_instance_id: int = INVALID_GAME_INSTANCE_ID
-
 func is_valid_player_name(player_name: String) -> bool:
 	if player_name.is_empty():
 		return false
@@ -61,13 +45,6 @@ func is_valid_player_name(player_name: String) -> bool:
 		return false
 	if player_name.length() > PLAYER_NAME_MAX_LENGTH:
 		return false
-	return true
-
-func set_local_player_name(player_name: String) -> bool:
-	if !is_valid_player_name(player_name):
-		return false
-	
-	_local_player_name = player_name
 	return true
 
 @rpc("any_peer", "call_remote", "reliable", 0)

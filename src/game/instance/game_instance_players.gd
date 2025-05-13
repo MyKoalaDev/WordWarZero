@@ -1,14 +1,10 @@
 @tool
 extends Node
 
-const GameInstanceBoard: = preload("game_instance_board.gd")
-
-var _players: Dictionary[int, bool] = {}
-
-var board: GameInstanceBoard = null
-
-## Indicates if this lobby should not be automatically deleted when this has no players.
-var persistent: bool = false
+class _PlayerData:
+	extends RefCounted
+	var player_name: String = "Player"
+	var color: Color = Color.WHITE
 
 func _force_sync(player_id: int) -> bool:
 	if !is_multiplayer_authority():
@@ -23,19 +19,18 @@ func _force_sync(player_id: int) -> bool:
 		push_error("GameInstancePlayers \"%s\" | Failed to force sync player ID \'%d\': cannot force sync self." % [self.name, player_id])
 		return false
 	
-	_rpc_set_lobby_name.rpc_id(player_id, _lobby_name)
-	_rpc_set_lobby_public.rpc_id(player_id, _lobby_public)
-	
 	for _player_id: int in _players:
-		_rpc_add_player_id.rpc_id(player_id, _player_id)
+		var player_data: _PlayerData = _players[_player_id]
+		_rpc_set_player_name.rpc_id(player_id, player_data.player_name)
 	
 	return true
 
-#region Player
 #region Player IDs
 
 signal player_id_added(player_id: int)
 signal player_id_removed(player_id: int)
+
+var _players: Dictionary[int, _PlayerData] = {}
 
 func get_player_ids() -> Array[int]:
 	var player_ids: Array[int] = _players.keys() as Array[int]
@@ -47,7 +42,7 @@ func _add_player_id(player_id: int) -> bool:
 		push_error("GameInstancePlayers \"%s\" | Failed to add player ID \'%d\': player ID already exists." % [self.name, player_id])
 		return false
 	
-	_players[player_id] = true
+	_players[player_id] = _PlayerData.new()
 	
 	if is_multiplayer_authority():
 		var local_player_id: int = multiplayer.get_unique_id()
@@ -56,14 +51,10 @@ func _add_player_id(player_id: int) -> bool:
 				_rpc_add_player_id.rpc_id(_player_id, player_id)
 		
 		_force_sync(player_id)
-		
-		if is_instance_valid(board):
-			board.add_player_id(player_id)
 	
 	player_id_added.emit(player_id)
 	return true
 
-@rpc("authority", "call_remote", "reliable", 0)
 func add_player_id(player_id: int) -> bool:
 	if !is_multiplayer_authority():
 		push_error("GameInstancePlayers \"%s\" | Failed to add player ID \'%d\': not the authority." % [self.name, player_id])
@@ -90,9 +81,6 @@ func _remove_player_id(player_id: int) -> bool:
 		
 		if player_id != local_player_id:
 			_rpc_remove_player_id.rpc_id(player_id, player_id)
-		
-		if is_instance_valid(board):
-			board.remove_player_id(player_id)
 	
 	player_id_removed.emit(player_id)
 	return true
@@ -109,102 +97,71 @@ func _rpc_remove_player_id(player_id: int) -> void:
 	_remove_player_id(player_id)
 
 #endregion
-#endregion
-#region Lobby
-#region Lobby Name
+#region Player Name
 
-signal lobby_name_changed(lobby_name_old: String, lobby_name_new: String)
+signal player_name_changed(player_id: int, player_name_old: String, player_name_new: String)
 
-var _lobby_name: String = ""
-
-func get_lobby_name() -> String:
-	return _lobby_name
-
-func _set_lobby_name(lobby_name: String) -> bool:
-	if  _lobby_name == lobby_name:
-		return true
+func get_player_name(player_id: int) -> String:
+	if !_players.has(player_id):
+		push_error("GameInstancePlayers \"%s\" | Failed to get player name for player ID '%d': could not find player ID." % [self.name, player_id])
+		return ""
 	
-	var lobby_name_old: String = _lobby_name
-	var lobby_name_new: String = lobby_name
-	
-	_lobby_name = lobby_name
-	
-	var local_player_id: int = multiplayer.get_unique_id()
-	for _player_id: int in _players:
-		if _player_id != local_player_id:
-			_rpc_set_lobby_name.rpc_id(_player_id, _lobby_name)
-	
-	lobby_name_changed.emit(lobby_name_old, lobby_name_new)
-	return true
+	return _players[player_id].player_name
 
-func set_lobby_name(lobby_name: String) -> bool:
-	if !is_multiplayer_authority():
-		push_error("GameInstanceLobby \"%s\" | Failed to set lobby name to \'%s\': only the authority can set." % [self.name, lobby_name])
+func _set_player_name(player_id: int, player_name: String) -> bool:
+	if !_players.has(player_id):
+		push_error("GameInstancePlayers \"%s\" | Failed to set player name to \'%s\' for player ID \'%d\': could not find player ID." % [self.name, player_name, player_id])
 		return false
 	
-	return _set_lobby_name(lobby_name)
-
-@rpc("authority", "call_remote", "reliable", 0)
-func _rpc_set_lobby_name(lobby_name: String) -> void:
-	_set_lobby_name(lobby_name)
-
-#endregion
-#region Lobby Public
-
-signal lobby_public_changed(lobby_public: bool)
-
-var _lobby_public: bool = false
-
-func _set_lobby_public(lobby_public: bool) -> bool:
-	if _lobby_public == lobby_public:
+	if _players[player_id].player_name == player_name:
 		return true
 	
-	_lobby_public = lobby_public
+	var player_name_old: String = _players[player_id].player_name
+	var player_name_new: String = player_name
+	
+	_players[player_id].player_name = player_name
 	
 	if is_multiplayer_authority():
 		var local_player_id: int = multiplayer.get_unique_id()
 		for _player_id: int in _players:
 			if _player_id != local_player_id:
-				_rpc_set_lobby_public.rpc_id(_player_id, _lobby_public)
+				_rpc_set_player_name.rpc_id(_player_id, player_id, player_name)
+		
+		player_name_changed.emit(player_id, player_name_old, player_name_new)
 	
-	lobby_public_changed.emit(_lobby_public)
 	return true
 
-func set_lobby_public(lobby_public: bool) -> bool:
+func set_player_name(player_id: int, player_name: String) -> bool:
 	if !is_multiplayer_authority():
-		push_error("GameInstanceLobby \"%s\" | Failed to set lobby public to \'%s\': only the authority can set." % [self.name, lobby_public])
+		push_error("GameInstancePlayers \"%s\" | Failed to set player name to \'%s\' for player ID \'%d\': not the authority." % [self.name, player_name, player_id])
 		return false
 	
-	return _set_lobby_public(lobby_public)
+	return _set_player_name(player_id, player_name)
 
 @rpc("authority", "call_remote", "reliable", 0)
-func _rpc_set_lobby_public(lobby_public: bool) -> void:
-	_set_lobby_public(lobby_public)
+func _rpc_set_player_name(player_id: int, player_name: String) -> void:
+	_set_player_name(player_id, player_name)
 
-#endregion
-#region Lobby Password
-
-var _lobby_password: String = ""
-
-func check_lobby_password(lobby_password: String) -> bool:
-	return _lobby_password == lobby_password
-
-func set_lobby_password(lobby_password: String) -> bool:
-	if !is_multiplayer_authority():
-		push_error("GameInstanceLobby \"%s\" | Failed to set lobby password: only the authority can set." % [self.name])
+func request_set_local_player_name(player_name: String) -> bool:
+	if is_multiplayer_authority():
+		push_error("GameInstancePlayers \"%s\" | Failed to request to set local player_name to \'%s\': not the authority." % [self.name, player_name])
 		return false
 	
-	if _lobby_password == lobby_password:
+	var player_id: int = multiplayer.get_unique_id()
+	
+	if _players[player_id].player_name == player_name:
 		return true
 	
-	_lobby_password = lobby_password
+	_rpc_request_set_local_player_name.rpc_id(get_multiplayer_authority(), player_name)
 	return true
 
-#endregion
-#endregion
-
-func _ready() -> void:
-	if Engine.is_editor_hint():
+@rpc("any_peer", "call_remote", "reliable")
+func _rpc_request_set_local_player_name(player_name: String) -> void:
+	var player_id: int = multiplayer.get_remote_sender_id()
+	if !is_multiplayer_authority():
+		push_error("GameInstancePlayers \"%s\" | (RPC) Failed to process request from player ID \'%d\' to set local player name to \'%s\': non authority received request." % [self.name, player_id, player_name])
 		return
 	
-	#board = get_node(NodePath("game_instance_lobby_board")) as GameInstanceLobbyBoard
+	_set_player_name(player_id, player_name)
+
+#endregion
