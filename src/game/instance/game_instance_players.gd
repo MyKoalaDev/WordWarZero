@@ -8,7 +8,7 @@ class _PlayerData:
 
 func _force_sync(player_id: int) -> bool:
 	if !is_multiplayer_authority():
-		push_error("GameInstancePlayers \"%s\" | Failed to force sync player ID \'%d\': not the authority." % [self.name, player_id])
+		push_error("GameInstancePlayers \"%s\" | Failed to force sync player ID \'%d\': unauthorized." % [self.name, player_id])
 		return false
 	
 	if !_players.has(player_id):
@@ -57,7 +57,7 @@ func _add_player_id(player_id: int) -> bool:
 
 func add_player_id(player_id: int) -> bool:
 	if !is_multiplayer_authority():
-		push_error("GameInstancePlayers \"%s\" | Failed to add player ID \'%d\': not the authority." % [self.name, player_id])
+		push_error("GameInstancePlayers \"%s\" | Failed to add player ID \'%d\': unauthorized." % [self.name, player_id])
 		return false
 	
 	return _add_player_id(player_id)
@@ -87,7 +87,7 @@ func _remove_player_id(player_id: int) -> bool:
 
 func remove_player_id(player_id: int) -> bool:
 	if !is_multiplayer_authority():
-		push_error("GameInstancePlayers \"%s\" | Failed to remove player ID \'%d\': not the authority." % [self.name, player_id])
+		push_error("GameInstancePlayers \"%s\" | Failed to remove player ID \'%d\': unauthorized." % [self.name, player_id])
 		return false
 	
 	return _remove_player_id(player_id)
@@ -133,7 +133,7 @@ func _set_player_name(player_id: int, player_name: String) -> bool:
 
 func set_player_name(player_id: int, player_name: String) -> bool:
 	if !is_multiplayer_authority():
-		push_error("GameInstancePlayers \"%s\" | Failed to set player name to \'%s\' for player ID \'%d\': not the authority." % [self.name, player_name, player_id])
+		push_error("GameInstancePlayers \"%s\" | Failed to set player name to \'%s\' for player ID \'%d\': unauthorized." % [self.name, player_name, player_id])
 		return false
 	
 	return _set_player_name(player_id, player_name)
@@ -144,7 +144,7 @@ func _rpc_set_player_name(player_id: int, player_name: String) -> void:
 
 func request_set_local_player_name(player_name: String) -> bool:
 	if is_multiplayer_authority():
-		push_error("GameInstancePlayers \"%s\" | Failed to request to set local player_name to \'%s\': not the authority." % [self.name, player_name])
+		push_error("GameInstancePlayers \"%s\" | Failed to request to set local player_name to \'%s\': unauthorized." % [self.name, player_name])
 		return false
 	
 	var player_id: int = multiplayer.get_unique_id()

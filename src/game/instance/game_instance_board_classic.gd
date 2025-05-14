@@ -1,12 +1,12 @@
 @tool
 extends "game_instance_board.gd"
 
-class _PlayerClassicData:
+class _PlayerDataClassic:
 	extends RefCounted
 	# Server-managed fields.
-	var submitted: bool = false
-	var points: int = 0
-	var tiles: Array[Tile] = []
+	var player_submit: bool = false
+	var player_points: int = 0
+	var player_tiles: Array[Tile] = []
 	
 	# Client-managed fields.
 	var place: int = 0
@@ -110,10 +110,6 @@ static func get_submission_result_message(submission_result: SubmissionResult) -
 			return "Not a valid word!"
 	return "?"
 
-# TODO: Leaderboard baking.
-var _leaderboard_names: PackedStringArray = PackedStringArray()
-var _leaderboard_points: PackedInt64Array = PackedInt64Array()
-
 func _force_sync(player_id: int) -> bool:
 	if !super(player_id):
 		return false
@@ -126,51 +122,244 @@ func _force_sync(player_id: int) -> bool:
 	_rpc_set_tile_board.rpc_id(player_id, _encode_tile_board(_tile_board))
 	
 	for _player_id: int in _players:
-		var player_data: _PlayerData = _players[_player_id]
-		#_rpc_set_player_submitted.rpc_id(player_id, _player_id, player_data.submitted)
+		var player_data_classic: _PlayerDataClassic = _players_classic[_player_id]
+		_rpc_set_player_submit.rpc_id(player_id, _player_id, player_data_classic.player_submit)
+		_rpc_set_player_points.rpc_id(player_id, _player_id, player_data_classic.player_points)
 		# NOTE: Each player should only know about their own tiles.
-		#_rpc_set_player_tiles.rpc_id(player_id, _player_id, player_data.tiles)
-		#_rpc_set_player_points.rpc_id(player_id, _player_id, player_data.points)
+		if player_id == _player_id:
+			_rpc_set_player_tiles.rpc_id(player_id, _player_id, player_data_classic.player_tiles)
 	
 	return true
 
-#region Play
+#region Player
 
-signal play_started()
-signal play_stopped()
+## Hashmap of player IDs (multiplayer peer id) to player data.
+var _players_classic: Dictionary[int, _PlayerDataClassic] = {}
 
-var _play: bool = false
+#region Player ID
 
-func _set_play(play: bool) -> bool:
-	if _play == play:
+func _add_player_id(player_id: int) -> bool:
+	if !super(player_id):
 		return false
 	
-	_play = play
+	_players_classic[player_id] = _PlayerDataClassic.new()
+	return true
+
+func _remove_player_id(player_id: int) -> bool:
+	if !super(player_id):
+		return false
 	
-	if _play:
-		play_started.emit()
-	else:
-		play_stopped.emit()
+	_players_classic.erase(player_id)
+	return true
+
+#endregion
+#region Player Submit
+
+signal player_submit_changed(player_id: int, player_submit: bool)
+
+func get_all_players_submit() -> bool:
+	if _players.is_empty():
+		return false
+	
+	for _player_id: int in _players:
+		if !_players[_player_id].player_spectator && !_players_classic[_player_id].player_submit:
+			return false
+	
+	return true
+
+func _set_all_players_submit(player_submit: bool) -> bool:
+	var local_player_id: int = multiplayer.get_unique_id()
+	for _player_id: int in _players_classic:
+		if _players_classic[_player_id].player_submit != player_submit:
+			_players_classic[_player_id].player_submit = player_submit
+			player_submit_changed.emit(_player_id, player_submit)
+		
+		if is_multiplayer_authority() && (_player_id != local_player_id):
+			_rpc_set_all_players_submit.rpc_id(_player_id, player_submit)
+	
+	return true
+
+func set_all_players_submit(player_submit: bool) -> bool:
+	if !is_multiplayer_authority():
+		push_error("GameInstanceBoard \"%s\" | Failed to set all players submit to \'%s\': unauthorized." % [self.name, str(player_submit)])
+		return false
+	
+	return _set_all_players_submit(player_submit)
+
+@rpc("authority", "call_remote", "reliable", 0)
+func _rpc_set_all_players_submit(player_submit: bool) -> void:
+	_set_all_players_submit(player_submit)
+
+func get_player_submit(player_id: int) -> bool:
+	if !has_player_id(player_id):
+		push_error("GameInstanceBoard \"%s\" | Failed to get player submit for player ID '%d': could not find player ID." % [self.name, player_id])
+		return false
+	
+	return _players_classic[player_id].player_submit
+
+func _set_player_submit(player_id: int, player_submit: bool) -> bool:
+	if !has_player_id(player_id):
+		push_error("GameInstanceBoard \"%s\" | Failed to set player submit to \'%s\' for player ID \'%d\': could not find player ID." % [self.name, str(player_submit), player_id])
+		return false
+	
+	if _players_classic[player_id].player_submit == player_submit:
+		return true
+	
+	_players_classic[player_id].player_submit = player_submit
 	
 	if is_multiplayer_authority():
 		var local_player_id: int = multiplayer.get_unique_id()
-		for _player_id: int in _players:
+		for _player_id: int in _players_classic:
 			if _player_id != local_player_id:
-				_rpc_set_play.rpc_id(_player_id, _play)
+				_rpc_set_player_submit.rpc_id(_player_id, player_id, player_submit)
+	
+	player_submit_changed.emit(player_id, player_submit)
+	return true
+
+func set_player_submit(player_id: int, player_submit: bool) -> bool:
+	if !is_multiplayer_authority():
+		push_error("GameInstanceBoard \"%s\" | Failed to set player submit to \'%s\' for player ID \'%d\': unauthorized." % [self.name, str(player_submit), player_id])
+		return false
+	
+	return _set_player_submit(player_id, player_submit)
+
+@rpc("authority", "call_remote", "reliable", 0)
+func _rpc_set_player_submit(player_id: int, player_submit: bool) -> void:
+	_set_player_submit(player_id, player_submit)
+
+#endregion
+#region Player Tiles
+
+signal player_tiles_changed(player_id: int, player_tiles: Array[Tile])
+
+func _clear_all_players_tiles() -> bool:
+	var local_player_id: int = multiplayer.get_unique_id()
+	for _player_id: int in _players_classic:
+		if !_players_classic[_player_id].player_tiles.is_empty():
+			_players_classic[_player_id].player_tiles.clear()
+			player_tiles_changed.emit(_player_id, [])
+		
+		if is_multiplayer_authority() && (_player_id != local_player_id):
+			_rpc_clear_all_players_tiles.rpc_id(_player_id)
 	
 	return true
 
-func set_play(play: bool) -> bool:
+func clear_all_players_tiles() -> bool:
 	if !is_multiplayer_authority():
-		push_error("GameInstanceLobbyBoardLobbyBoard \"%s\" | Failed to set play to \'%s\': not the authority." % [self.name, str(play)])
+		push_error("GameInstanceBoard \"%s\" | Failed to clear all player tiles: unauthorized." % [self.name])
 		return false
 	
-	return _set_play(play)
+	return _clear_all_players_tiles()
 
 @rpc("authority", "call_remote", "reliable", 0)
-func _rpc_set_play(play: bool) -> void:
-	_set_play(play)
+func _rpc_clear_all_players_tiles() -> void:
+	_clear_all_players_tiles()
 
+func get_player_tiles(player_id: int) -> Array[Tile]:
+	if has_player_id(player_id):
+		push_error("GameInstanceBoard \"%s\" | Failed to get player tiles for player ID '%d': could not find player ID." % [self.name, player_id])
+		return []
+	
+	var tiles: Array[Tile] = []
+	for tile: Tile in _players_classic[player_id].player_tiles:
+		tiles.append(Tile.new(tile.get_face(), tile.is_wild()))
+	tiles.make_read_only()
+	return tiles
+
+func _set_player_tiles(player_id: int, player_tiles: Array[Tile]) -> bool:
+	if !has_player_id(player_id):
+		push_error("GameInstanceBoard \"%s\" | Failed to set player tiles to \'%s\' for player ID \'%d\': could not find player ID." % [self.name, str(player_tiles), player_id])
+		return false
+	
+	var tiles: Array[Tile] = []
+	for tile: Tile in _players_classic[player_id].player_tiles:
+		tiles.append(Tile.new(tile.get_face(), tile.is_wild()))
+	
+	_players_classic[player_id].player_tiles = tiles
+	
+	if is_multiplayer_authority():
+		var local_player_id: int = multiplayer.get_unique_id()
+		for _player_id: int in _players_classic:
+			if _player_id != local_player_id:
+				_rpc_set_player_tiles.rpc_id(_player_id, player_id, _encode_tiles(tiles))
+	
+	player_tiles_changed.emit(player_id, get_player_tiles(player_id))
+	return true
+
+func set_player_tiles(player_id: int, player_tiles: Array[Tile]) -> bool:
+	if !is_multiplayer_authority():
+		push_error("GameInstanceBoard \"%s\" | Failed to set player tiles to \'%s\' for player ID \'%d\': unauthorized." % [self.name, str(player_tiles), player_id])
+		return false
+	
+	return _set_player_tiles(player_id, player_tiles)
+
+@rpc("authority", "call_remote", "reliable", 0)
+func _rpc_set_player_tiles(player_id: int, bytes: PackedByteArray) -> void:
+	_set_player_tiles(player_id, _decode_tiles(bytes))
+
+#endregion
+#region Player Points
+
+signal player_points_changed(player_id: int, player_points: int)
+
+func _clear_all_players_points() -> bool:
+	var local_player_id: int = multiplayer.get_unique_id()
+	for _player_id: int in _players_classic:
+		if _players_classic[_player_id].player_points != 0:
+			_players_classic[_player_id].player_points = 0
+			player_points_changed.emit(_player_id, 0)
+		
+		if is_multiplayer_authority() && (_player_id != local_player_id):
+			_rpc_clear_all_players_points.rpc_id(_player_id)
+	
+	return true
+
+func clear_all_players_points() -> bool:
+	if !is_multiplayer_authority():
+		push_error("GameInstanceBoard \"%s\" | Failed to clear all player points: unauthorized." % [self.name])
+		return false
+	
+	return _clear_all_players_points()
+
+@rpc("authority", "call_remote", "reliable", 0)
+func _rpc_clear_all_players_points() -> void:
+	_clear_all_players_points()
+
+func get_player_points(player_id: int) -> int:
+	if has_player_id(player_id):
+		push_error("GameInstanceBoard \"%s\" | Failed to get player points for player ID '%d': could not find player ID." % [self.name, player_id])
+		return 0
+	
+	return _players_classic[player_id].player_points
+
+func _set_player_points(player_id: int, player_points: int) -> bool:
+	if !has_player_id(player_id):
+		push_error("GameInstanceBoard \"%s\" | Failed to set player points to \'%s\' for player ID \'%d\': could not find player ID." % [self.name, str(player_points), player_id])
+		return false
+	
+	_players_classic[player_id].player_points = player_points
+	
+	if is_multiplayer_authority():
+		var local_player_id: int = multiplayer.get_unique_id()
+		for _player_id: int in _players_classic:
+			if _player_id != local_player_id:
+				_rpc_set_player_points.rpc_id(_player_id, player_id, player_points)
+	
+	player_points_changed.emit(player_id, get_player_points(player_id))
+	return true
+
+func set_player_points(player_id: int, player_points: int) -> bool:
+	if !is_multiplayer_authority():
+		push_error("GameInstanceBoard \"%s\" | Failed to set player points to \'%s\' for player ID \'%d\': unauthorized." % [self.name, str(player_points), player_id])
+		return false
+	
+	return _set_player_points(player_id, player_points)
+
+@rpc("authority", "call_remote", "reliable", 0)
+func _rpc_set_player_points(player_id: int, player_points: int) -> void:
+	_set_player_points(player_id, player_points)
+
+#endregion
 #endregion
 #region Turn
 #region Turn Count
@@ -198,7 +387,7 @@ func _set_turn_count(turn_count: int) -> bool:
 
 func set_turn_count(turn_count: int) -> bool:
 	if !is_multiplayer_authority():
-		push_error("GameInstanceLobbyBoard \"%s\" | Failed to set turn count to \'%d\': not the authority." % [self.name, turn_count])
+		push_error("GameInstanceBoard \"%s\" | Failed to set turn count to \'%d\': unauthorized." % [self.name, turn_count])
 		return false
 	
 	if !_set_turn_count(turn_count):
@@ -231,7 +420,7 @@ func _set_turn_count_max(turn_count_max: int) -> bool:
 
 func set_turn_count_max(turn_count_max: int) -> bool:
 	if !is_multiplayer_authority():
-		push_error("GameInstanceLobbyBoard \"%s\" | Failed to set turn count max to \'%d\': not the authority." % [self.name, turn_count_max])
+		push_error("GameInstanceBoard \"%s\" | Failed to set turn count max to \'%d\': unauthorized." % [self.name, turn_count_max])
 		return false
 	
 	if !_set_turn_count_max(turn_count_max):
@@ -273,7 +462,7 @@ func _set_turn_timer(turn_timer: int) -> bool:
 
 func set_turn_timer(turn_timer: int) -> bool:
 	if !is_multiplayer_authority():
-		push_error("GameInstanceLobbyBoard \"%s\" | Failed to set turn timer to \'%d\': not the authority." % [self.name, turn_timer])
+		push_error("GameInstanceBoard \"%s\" | Failed to set turn timer to \'%d\': unauthorized." % [self.name, turn_timer])
 		return false
 	
 	if !_set_turn_timer(turn_timer):
@@ -306,7 +495,7 @@ func _set_turn_timer_max(turn_timer_max: int) -> bool:
 
 func set_turn_timer_max(turn_timer_max: int) -> bool:
 	if !is_multiplayer_authority():
-		push_error("GameInstanceLobbyBoard \"%s\" | Failed to set turn timer max to \'%d\': not the authority." % [self.name, turn_timer_max])
+		push_error("GameInstanceBoard \"%s\" | Failed to set turn timer max to \'%d\': unauthorized." % [self.name, turn_timer_max])
 		return false
 	
 	if !_set_turn_timer_max(turn_timer_max):
@@ -357,7 +546,7 @@ func _set_tile_board(tile_board: Dictionary[Vector2i, Tile]) -> bool:
 
 func set_tile_board(tile_board: Dictionary[Vector2i, Tile]) -> bool:
 	if !is_multiplayer_authority():
-		push_error("GameInstanceLobbyBoard \"%s\" | Failed to set tile board: not the authority." % [self.name])
+		push_error("GameInstanceBoard \"%s\" | Failed to set tile board: unauthorized." % [self.name])
 		return false
 	
 	return _set_tile_board(tile_board)
@@ -379,7 +568,7 @@ func _clear_tile_board() -> bool:
 
 func clear_tile_board() -> bool:
 	if !is_multiplayer_authority():
-		push_error("GameInstanceLobbyBoard \"%s\" | Failed to clear tile board: not the authority." % [self.name])
+		push_error("GameInstanceBoard \"%s\" | Failed to clear tile board: unauthorized." % [self.name])
 		return false
 	
 	return _clear_tile_board()
@@ -390,7 +579,7 @@ func _rpc_clear_tile_board() -> void:
 
 func _add_tile_board_tile(tile_position: Vector2i, tile: Tile) -> bool:
 	if _tile_board.has(tile_position):
-		push_error("GameInstanceLobbyBoard \"%s\" | Failed to add tile board tile: a tile already exists at (%d, %d)." % [self.name, tile_position.x, tile_position.y])
+		push_error("GameInstanceBoard \"%s\" | Failed to add tile board tile: a tile already exists at (%d, %d)." % [self.name, tile_position.x, tile_position.y])
 		return false
 	
 	_tile_board[tile_position] = tile
@@ -408,7 +597,7 @@ func _add_tile_board_tile(tile_position: Vector2i, tile: Tile) -> bool:
 
 func add_tile_board_tile(tile_position: Vector2i, tile: Tile) -> bool:
 	if !is_multiplayer_authority():
-		push_error("GameInstanceLobbyBoard \"%s\" | Failed to add tile board tile: not the authority." % [self.name])
+		push_error("GameInstanceBoard \"%s\" | Failed to add tile board tile: unauthorized." % [self.name])
 		return false
 	
 	return _add_tile_board_tile(tile_position, tile)
@@ -445,416 +634,236 @@ func get_tile_board_multiplier_word(tile_position: Vector2i) -> int:
 	return _tile_board_multipliers_word[wrapped.x + (wrapped.y * _tile_board_multipliers_word_size.x)]
 
 #endregion
-#region Player
-
-## Hashmap of player IDs (multiplayer peer id) to player data.
-var _players_classic: Dictionary[int, _PlayerData] = {}
-
-func is_empty() -> bool:
-	return _players.is_empty()
-
-#region Player ID
-
-func _add_player_id(player_id: int) -> bool:
-	if !super(player_id):
-		return false
-	
-	_players[player_id] = _PlayerDataClassic.new()
-	
-	if is_multiplayer_authority():
-		_force_sync(player_id)
-	
-	return true
-
-func _remove_player_id(player_id: int) -> bool:
-	if !_players.has(player_id):
-		push_error("GameInstancePlayers \"%s\" | Failed to remove player ID \'%d\': could not find player ID." % [self.name, player_id])
-		return false
-	
-	_players.erase(player_id)
-	
-	if is_multiplayer_authority():
-		var local_player_id: int = multiplayer.get_unique_id()
-		for _player_id: int in _players:
-			if _player_id != local_player_id:
-				_rpc_remove_player_id.rpc_id(_player_id, player_id)
-		
-		if player_id != local_player_id:
-			_rpc_remove_player_id.rpc_id(player_id, player_id)
-	
-	player_id_removed.emit(player_id)
-	return true
-
-#endregion
-#region Player Submitted
-
-#func get_all_players_submitted() -> bool:
-	#if _players.is_empty():
-		#return false
-	#
-	#for _player_id: int in _players:
-		#if !_players[_player_id].spectator && !_players[_player_id].submitted:
-			#return false
-	#
-	#return true
-
-#endregion
-#region Player Tiles
-#
-#func clear_all_players_tiles() -> bool:
-	#if !is_multiplayer_authority():
-		#push_error("GameInstanceLobbyBoard \"%s\" | Failed to clear all players tiles: only the authority can clear all players tiles." % [self.name])
-		#return false
-	#
-	#for _player_id: int in _players:
-		#_players[_player_id].tiles.clear()
-		#if _player_id != multiplayer.get_unique_id():
-			#_rpc_clear_all_players_tiles.rpc_id(_player_id)
-	#
-	#updated.emit()
-	#return true
-#
-#@rpc("authority", "call_remote", "reliable", 0)
-#func _rpc_clear_all_players_tiles() -> void:
-	#for _player_id: int in _players:
-		#_players[_player_id].tiles.clear()
-	#
-	#updated.emit()
-#
-#func get_player_tiles(player_id: int) -> Array[Tile]:
-	#if !_players.has(player_id):
-		#push_error("GameInstanceLobbyBoard \"%s\" | Failed to get player tiles for player ID \'%d\': could not find player ID." % [self.name, player_id])
-		#return []
-	#
-	#var tiles: Array[Tile] = []
-	#for tile: Tile in _players[player_id].tiles:
-		#tiles.append(Tile.new(tile.get_face(), tile.is_wild()))
-	#return tiles
-#
-#func set_player_tiles(player_id: int, player_tiles: Array[Tile]) -> bool:
-	#if !is_multiplayer_authority():
-		#push_error("GameInstanceLobbyBoard \"%s\" | Failed to set player tiles to \'%s\' for player ID \'%d\': only the authority can set player tiles." % [self.name, str(player_tiles), player_id])
-		#return false
-	#
-	#if !_players.has(player_id):
-		#push_error("GameInstanceLobbyBoard \"%s\" | Failed to set player tiles to \'%s\' for player ID \'%d\': could not find player ID." % [self.name, str(player_tiles), player_id])
-		#return false
-	#
-	#_players[player_id].tiles = player_tiles
-	#
-	## Sync with only the tiles owner.
-	#if player_id != multiplayer.get_unique_id():
-		#_rpc_set_player_tiles.rpc_id(player_id, player_id, _encode_tiles(player_tiles))
-	#
-	#updated.emit()
-	#return true
-#
-#@rpc("authority", "call_remote", "reliable", 0)
-#func _rpc_set_player_tiles(player_id: int, bytes: PackedByteArray) -> void:
-	#_players[player_id].tiles = _decode_tiles(bytes)
-	#
-	#updated.emit()
-
-#endregion
-#region Player Points
-#
-#func clear_all_players_points() -> bool:
-	#if !is_multiplayer_authority():
-		#push_error("GameInstanceLobbyBoard \"%s\" | Failed to clear all players points: only the authority can clear all players points." % [self.name])
-		#return false
-	#
-	#for _player_id: int in _players:
-		#_players[_player_id].points = 0
-		#if _player_id != multiplayer.get_unique_id():
-			#_rpc_clear_all_players_points.rpc_id(_player_id)
-	#
-	#updated.emit()
-	#return true
-#
-#@rpc("authority", "call_remote", "reliable", 0)
-#func _rpc_clear_all_players_points() -> void:
-	#for _player_id: int in _players:
-		#_players[_player_id].points = 0
-	#
-	#updated.emit()
-#
-#func get_player_points(player_id: int) -> int:
-	#if !_players.has(player_id):
-		#push_error("GameInstanceLobbyBoard \"%s\" | Failed to get player points for player ID \'%d\': could not find player ID." % [self.name, player_id])
-		#return -1
-	#
-	#return _players[player_id].points
-#
-#func set_player_points(player_id: int, player_points: int) -> bool:
-	#if !is_multiplayer_authority():
-		#push_error("GameInstanceLobbyBoard \"%s\" | Failed to set player points to \'%s\' for player ID \'%d\': only the authority can set player points." % [self.name, str(player_points), player_id])
-		#return false
-	#
-	#if !_players.has(player_id):
-		#push_error("GameInstanceLobbyBoard \"%s\" | Failed to set player points to \'%s\' for player ID \'%d\': could not find player ID." % [self.name, str(player_points), player_id])
-		#return false
-	#
-	#if _players[player_id].points == player_points:
-		#return true
-	#
-	#_players[player_id].points = player_points
-	#
-	#for _player_id: int in _players:
-		#if _player_id != multiplayer.get_unique_id():
-			#_rpc_set_player_points.rpc_id(_player_id, player_points)
-	#
-	#updated.emit()
-	#return true
-#
-#@rpc("authority", "call_remote", "reliable", 0)
-#func _rpc_set_player_points(player_id: int, player_points: int) -> void:
-	#if _players.has(player_id):
-		#_players[player_id].points = player_points
-	#
-	#updated.emit()
-
-#endregion
-#region Player Place
-#
-#func get_player_place(player_id: int) -> int:
-	#if !_players.has(player_id):
-		#push_error("GameInstanceLobbyBoard \"%s\" | Failed to get player place for player ID \'%d\': could not find player ID." % [self.name, player_id])
-		#return -1
-	#
-	#return _players[player_id].place
-
-#endregion
-#endregion
 #region Submission
-#
-#signal submission_validated(submission_result: SubmissionResult)
-#
-#var _submission_validating: bool = false
-#
-#func is_submission_validating() -> bool:
-	#return _submission_validating
-#
-#@rpc("any_peer", "call_remote", "reliable", 0)
-#func _rpc_request_submission_validate(bytes: PackedByteArray) -> void:
-	#if is_multiplayer_authority():
-		#var player_id: int = multiplayer.get_remote_sender_id()
-		#var submission: Dictionary[Vector2i, Tile] = _decode_tile_board(bytes)
-		#_rpc_return_submission_validate.rpc_id(player_id, submission_validate(player_id, submission))
-#
-#@rpc("authority", "call_remote", "reliable", 0)
-#func _rpc_return_submission_validate(submission_result: SubmissionResult) -> void:
-	#submission_validated.emit(submission_result)
-	#_submission_validating = false
-#
-#func submission_validate(player_id: int, submission: Dictionary[Vector2i, Tile]) -> SubmissionResult:
-	## Check if this instance has player.
-	#if !has_player_id(player_id):
-		#return SubmissionResult.INVALID_PLAYER
-	#
-	## If not the authority, check if player id is remote.
-	#if !is_multiplayer_authority() && (player_id != multiplayer.get_unique_id()):
-		#return SubmissionResult.INVALID_PLAYER
-	#
-	## Check if player has already submitted this turn.
-	#if _submission_validating || get_player_submitted(player_id):
-		#return SubmissionResult.ALREADY_SUBMITTED
-	#
-	## Check if submission is empty.
-	#if submission.is_empty():
-		#return SubmissionResult.EMPTY_SUBMISSION
-	#
-	## Check for invalid player tile data.
-	#var player_tiles: Array[Tile] = get_player_tiles(player_id)
-	#for tile_position: Vector2i in submission:
-		#var submission_tile: Tile = submission[tile_position]
-		#var check: bool = false
-		#
-		## Match player tiles to submission tiles. If no match can be found, the submission is invalid.
-		## Wild tiles can match even if the faces are different.
-		## Search is destructive to account for duplicate tiles (tally).
-		#for player_tile: Tile in player_tiles:
-			#if player_tile.is_wild() != submission_tile.is_wild():
-				#continue
-			#
-			#if !player_tile.is_wild() && (player_tile.get_face() != submission_tile.get_face()):
-				#continue
-			#
-			## Tile match was found.
-			#check = true
-			#player_tiles.erase(player_tile)
-			#break
-		#
-		#if !check:
-			#return SubmissionResult.INVALID_TILES# game code problem
-	#
-	## Check for first word length.
-	#if _tile_board.is_empty() && submission.size() < 2:
-		#return SubmissionResult.TOO_SHORT
-	#
-	## Check for overlapping tile positions.
-	## Usually happens if the client's tile board is behind on updates (e.g. another player had just submitted).
-	#for tile_position: Vector2i in submission:
-		#if _tile_board.has(tile_position):
-			#return SubmissionResult.TILES_OVERLAPPING
-	#
-	## TODO: Optimize all of this.
-	## Make more flexible on axis checks (hexagon tiles?)
-	#
-	#var tile_position_default: Vector2i = submission.keys()[0]
-	#var tile_major_axis: Vector2i = Vector2i.RIGHT# Valid submission has all tiles on one major axis.
-	#var tile_major_axis_min: Vector2i = tile_position_default# Min tile on major axis (including board tiles)
-	#var tile_major_axis_max: Vector2i = tile_position_default# Max tile on major axis (including board tiles)
-	#var tile_minor_axis: Vector2i = Vector2i.DOWN# Not the major axis.
-	#
-	## Check if tiles are collinear and contiguous.
-	## Get component-wise min and max (upper-left and bottom-right 2D rect).
-	#var tile_rect_min: Vector2i = tile_position_default
-	#var tile_rect_max: Vector2i = tile_position_default
-	#for tile_position: Vector2i in submission:
-		#tile_rect_min = tile_rect_min.min(tile_position)
-		#tile_rect_max = tile_rect_max.max(tile_position)
-	#
-	## If both axis components are non-zero, tiles are not collinear.
-	#var tile_rect_delta: Vector2i = (tile_rect_max - tile_rect_min).mini(1)
-	#if tile_rect_delta == Vector2i.ONE:
-		#return SubmissionResult.TILES_NOT_COLLINEAR
-	#
-	#if submission.size() > 1:
-		#tile_major_axis = tile_rect_delta
-		#tile_minor_axis = Vector2i.ONE - tile_major_axis
-	#
-	## NOTE: An axis is either Vector2i.DOWN or Vector2i.RIGHT.
-	#assert(tile_major_axis == Vector2i.DOWN || tile_major_axis == Vector2i.RIGHT)
-	#assert(tile_minor_axis == Vector2i.DOWN || tile_minor_axis == Vector2i.RIGHT)
-	#assert(tile_major_axis != tile_minor_axis)
-	#
-	## Get major axis min and max.
-	#while true:
-		#var tile_position: Vector2i = tile_major_axis_min - tile_major_axis
-		#if !submission.has(tile_position) && !_tile_board.has(tile_position):
-			#break
-		#tile_major_axis_min = tile_position
-	#
-	#while true:
-		#var tile_position: Vector2i = tile_major_axis_max + tile_major_axis
-		#if !submission.has(tile_position) && !_tile_board.has(tile_position):
-			#break
-		#tile_major_axis_max = tile_position
-	#
-	## If axis min/max is more/less than rect min/max, tiles are not contiguous.
-	#if tile_major_axis_min > tile_rect_min || tile_major_axis_max < tile_rect_max:
-		#return SubmissionResult.TILES_NOT_CONTIGUOUS
-	#
-	## Check for center tile position (if first submission).
-	#if _tile_board.is_empty():
-		#var has_center: bool = false
-		#for tile_position: Vector2i in submission:
-			#if tile_position == Vector2i.ZERO:
-				#has_center = true
-		#if !has_center:
-			#return SubmissionResult.FIRST_CENTER
-	#
-	## Check if connects to tiles already on the board.
-	#if !_tile_board.is_empty():
-		#var check: bool = false
-		#for tile_position: Vector2i in submission:
-			#if (_tile_board.has(tile_position + Vector2i.DOWN) || 
-				#_tile_board.has(tile_position + Vector2i.UP) ||
-				#_tile_board.has(tile_position + Vector2i.RIGHT) ||
-				#_tile_board.has(tile_position + Vector2i.LEFT)):
-				#check = true
-				#break
-		#if !check:
-			#return SubmissionResult.TILES_NOT_CONNECTED
-	#
-	#var points: int = 0
-	#
-	## Get all words created by submission and calculate points.
-	## Words are 2 or more consecutive tiles in left->right and top->bottom directions.
-	#var words: Array[String] = []
-	## Get major axis word.
-	#var tile_major_axis_word: String = ""
-	#var tile_major_axis_position: Vector2i = tile_major_axis_min
-	#var tile_major_axis_points: int = 0
-	#var tile_major_axis_points_multiplier: int = 1
-	#while tile_major_axis_position <= tile_major_axis_max:
-		#var tile: Tile = null
-		#if _tile_board.has(tile_major_axis_position):
-			#tile = _tile_board[tile_major_axis_position]
-		#elif submission.has(tile_major_axis_position):
-			#tile = submission[tile_major_axis_position]
-		#
-		#tile_major_axis_word += tile.get_face_string()
-		#tile_major_axis_points += tile.get_face_points() * get_tile_board_multiplier_letter(tile_major_axis_position)
-		#tile_major_axis_points_multiplier *= get_tile_board_multiplier_word(tile_major_axis_position)
-		#tile_major_axis_position += tile_major_axis
-	#
-	#if tile_major_axis_word.length() > 1:
-		#words.append(tile_major_axis_word)
-		#points += tile_major_axis_points * tile_major_axis_points_multiplier
-	#
-	## Get minor axis words (only from submission tiles!)
-	#for tile_position: Vector2i in submission:
-		#var tile: Tile = submission[tile_position]
-		#var tile_minor_axis_word: String = tile.get_face_string()
-		#var tile_minor_axis_points: int = tile.get_face_points() * get_tile_board_multiplier_letter(tile_position)
-		#var tile_minor_axis_points_multiplier: int = get_tile_board_multiplier_word(tile_position)
-		#
-		## Navigate to minor axis min.
-		#var tile_minor_axis_min: Vector2i = tile_position
-		#while true:
-			#tile_minor_axis_min -= tile_minor_axis
-			#if _tile_board.has(tile_minor_axis_min):
-				#tile = _tile_board[tile_minor_axis_min]
-			#elif submission.has(tile_minor_axis_min):
-				#tile = submission[tile_minor_axis_min]
-			#else:
-				#break
-			#
-			#tile_minor_axis_word = tile.get_face_string() + tile_minor_axis_word
-			#tile_minor_axis_points += tile.get_face_points() * get_tile_board_multiplier_letter(tile_minor_axis_min)
-			#tile_minor_axis_points_multiplier *= get_tile_board_multiplier_word(tile_minor_axis_min)
-		#
-		## Navigate to minor axis max.
-		#var tile_minor_axis_max: Vector2i = tile_position
-		#while true:
-			#tile_minor_axis_max += tile_minor_axis
-			#if _tile_board.has(tile_minor_axis_max):
-				#tile = _tile_board[tile_minor_axis_max]
-			#elif submission.has(tile_minor_axis_max):
-				#tile = submission[tile_minor_axis_max]
-			#else:
-				#break
-			#
-			#tile_minor_axis_word = tile.get_face_string() + tile_minor_axis_word
-			#tile_minor_axis_points += tile.get_face_points() * get_tile_board_multiplier_letter(tile_minor_axis_max)
-			#tile_minor_axis_points_multiplier *= get_tile_board_multiplier_word(tile_minor_axis_max)
-		#
-		#if tile_minor_axis_word.length() > 1:
-			#words.append(tile_minor_axis_word)
-			#points += tile_minor_axis_points * tile_minor_axis_points_multiplier
-	#
-	## Check words with a word database.
-	#for word: String in words:
-		#if !WordDatabase.is_word(word):
-			#return SubmissionResult.INVALID_WORD
-	#
-	## Submission passed all checks!
-	#if !is_multiplayer_authority():
-		#_submission_validating = true
-		#_rpc_request_submission_validate.rpc_id(get_multiplayer_authority(), _encode_tile_board(submission))
-		#return SubmissionResult.AWAITING
-	#
-	#set_player_submitted(player_id, true)
-	## TODO: Fill player tiles.
-	#set_player_tiles(player_id, player_tiles)
-	#set_player_points(player_id, get_player_points(player_id) + points)
-	#for tile_position: Vector2i in submission:
-		#add_tile_board_tile(tile_position, submission[tile_position])
-	#return SubmissionResult.OK
+
+signal submission_validated(submission_result: SubmissionResult)
+
+var _submission_validating: bool = false
+
+func is_submission_validating() -> bool:
+	return _submission_validating
+
+@rpc("any_peer", "call_remote", "reliable", 0)
+func _rpc_request_submission_validate(bytes: PackedByteArray) -> void:
+	if is_multiplayer_authority():
+		var player_id: int = multiplayer.get_remote_sender_id()
+		var submission: Dictionary[Vector2i, Tile] = _decode_tile_board(bytes)
+		_rpc_return_submission_validate.rpc_id(player_id, submission_validate(player_id, submission))
+
+@rpc("authority", "call_remote", "reliable", 0)
+func _rpc_return_submission_validate(submission_result: SubmissionResult) -> void:
+	submission_validated.emit(submission_result)
+	_submission_validating = false
+
+func submission_validate(player_id: int, submission: Dictionary[Vector2i, Tile]) -> SubmissionResult:
+	# Check if this instance has player.
+	if !has_player_id(player_id):
+		return SubmissionResult.INVALID_PLAYER
+	
+	# If unauthorized, check if player id is remote.
+	if !is_multiplayer_authority() && (player_id != multiplayer.get_unique_id()):
+		return SubmissionResult.INVALID_PLAYER
+	
+	# Check if player has already submitted this turn.
+	if _submission_validating || _players_classic[player_id].player_submit:
+		return SubmissionResult.ALREADY_SUBMITTED
+	
+	# Check if submission is empty.
+	if submission.is_empty():
+		return SubmissionResult.EMPTY_SUBMISSION
+	
+	# Check for invalid player tile data.
+	var player_tiles: Array[Tile] = get_player_tiles(player_id)
+	for tile_position: Vector2i in submission:
+		var submission_tile: Tile = submission[tile_position]
+		var check: bool = false
+		
+		# Match player tiles to submission tiles. If no match can be found, the submission is invalid.
+		# Wild tiles can match even if the faces are different.
+		# Search is destructive to account for duplicate tiles (tally).
+		for player_tile: Tile in player_tiles:
+			if player_tile.is_wild() != submission_tile.is_wild():
+				continue
+			
+			if !player_tile.is_wild() && (player_tile.get_face() != submission_tile.get_face()):
+				continue
+			
+			# Tile match was found.
+			check = true
+			player_tiles.erase(player_tile)
+			break
+		
+		if !check:
+			return SubmissionResult.INVALID_TILES# game code problem
+	
+	# Check for first word length.
+	if _tile_board.is_empty() && submission.size() < 2:
+		return SubmissionResult.TOO_SHORT
+	
+	# Check for overlapping tile positions.
+	# Usually happens if the client's tile board is behind on updates (e.g. another player had just submitted).
+	for tile_position: Vector2i in submission:
+		if _tile_board.has(tile_position):
+			return SubmissionResult.TILES_OVERLAPPING
+	
+	# TODO: Optimize all of this.
+	# Make more flexible on axis checks (hexagon tiles?)
+	
+	var tile_position_default: Vector2i = submission.keys()[0]
+	var tile_major_axis: Vector2i = Vector2i.RIGHT# Valid submission has all tiles on one major axis.
+	var tile_major_axis_min: Vector2i = tile_position_default# Min tile on major axis (including board tiles)
+	var tile_major_axis_max: Vector2i = tile_position_default# Max tile on major axis (including board tiles)
+	var tile_minor_axis: Vector2i = Vector2i.DOWN# Not the major axis.
+	
+	# Check if tiles are collinear and contiguous.
+	# Get component-wise min and max (upper-left and bottom-right 2D rect).
+	var tile_rect_min: Vector2i = tile_position_default
+	var tile_rect_max: Vector2i = tile_position_default
+	for tile_position: Vector2i in submission:
+		tile_rect_min = tile_rect_min.min(tile_position)
+		tile_rect_max = tile_rect_max.max(tile_position)
+	
+	# If both axis components are non-zero, tiles are not collinear.
+	var tile_rect_delta: Vector2i = (tile_rect_max - tile_rect_min).mini(1)
+	if tile_rect_delta == Vector2i.ONE:
+		return SubmissionResult.TILES_NOT_COLLINEAR
+	
+	if submission.size() > 1:
+		tile_major_axis = tile_rect_delta
+		tile_minor_axis = Vector2i.ONE - tile_major_axis
+	
+	# NOTE: An axis is either Vector2i.DOWN or Vector2i.RIGHT.
+	assert(tile_major_axis == Vector2i.DOWN || tile_major_axis == Vector2i.RIGHT)
+	assert(tile_minor_axis == Vector2i.DOWN || tile_minor_axis == Vector2i.RIGHT)
+	assert(tile_major_axis != tile_minor_axis)
+	
+	# Get major axis min and max.
+	while true:
+		var tile_position: Vector2i = tile_major_axis_min - tile_major_axis
+		if !submission.has(tile_position) && !_tile_board.has(tile_position):
+			break
+		tile_major_axis_min = tile_position
+	
+	while true:
+		var tile_position: Vector2i = tile_major_axis_max + tile_major_axis
+		if !submission.has(tile_position) && !_tile_board.has(tile_position):
+			break
+		tile_major_axis_max = tile_position
+	
+	# If axis min/max is more/less than rect min/max, tiles are not contiguous.
+	if tile_major_axis_min > tile_rect_min || tile_major_axis_max < tile_rect_max:
+		return SubmissionResult.TILES_NOT_CONTIGUOUS
+	
+	# Check for center tile position (if first submission).
+	if _tile_board.is_empty():
+		var has_center: bool = false
+		for tile_position: Vector2i in submission:
+			if tile_position == Vector2i.ZERO:
+				has_center = true
+		if !has_center:
+			return SubmissionResult.FIRST_CENTER
+	
+	# Check if connects to tiles already on the board.
+	if !_tile_board.is_empty():
+		var check: bool = false
+		for tile_position: Vector2i in submission:
+			if (_tile_board.has(tile_position + Vector2i.DOWN) || 
+				_tile_board.has(tile_position + Vector2i.UP) ||
+				_tile_board.has(tile_position + Vector2i.RIGHT) ||
+				_tile_board.has(tile_position + Vector2i.LEFT)):
+				check = true
+				break
+		if !check:
+			return SubmissionResult.TILES_NOT_CONNECTED
+	
+	var points: int = 0
+	
+	# Get all words created by submission and calculate points.
+	# Words are 2 or more consecutive tiles in left->right and top->bottom directions.
+	var words: Array[String] = []
+	# Get major axis word.
+	var tile_major_axis_word: String = ""
+	var tile_major_axis_position: Vector2i = tile_major_axis_min
+	var tile_major_axis_points: int = 0
+	var tile_major_axis_points_multiplier: int = 1
+	while tile_major_axis_position <= tile_major_axis_max:
+		var tile: Tile = null
+		if _tile_board.has(tile_major_axis_position):
+			tile = _tile_board[tile_major_axis_position]
+		elif submission.has(tile_major_axis_position):
+			tile = submission[tile_major_axis_position]
+		
+		tile_major_axis_word += tile.get_face_string()
+		tile_major_axis_points += tile.get_face_points() * get_tile_board_multiplier_letter(tile_major_axis_position)
+		tile_major_axis_points_multiplier *= get_tile_board_multiplier_word(tile_major_axis_position)
+		tile_major_axis_position += tile_major_axis
+	
+	if tile_major_axis_word.length() > 1:
+		words.append(tile_major_axis_word)
+		points += tile_major_axis_points * tile_major_axis_points_multiplier
+	
+	# Get minor axis words (only from submission tiles!)
+	for tile_position: Vector2i in submission:
+		var tile: Tile = submission[tile_position]
+		var tile_minor_axis_word: String = tile.get_face_string()
+		var tile_minor_axis_points: int = tile.get_face_points() * get_tile_board_multiplier_letter(tile_position)
+		var tile_minor_axis_points_multiplier: int = get_tile_board_multiplier_word(tile_position)
+		
+		# Navigate to minor axis min.
+		var tile_minor_axis_min: Vector2i = tile_position
+		while true:
+			tile_minor_axis_min -= tile_minor_axis
+			if _tile_board.has(tile_minor_axis_min):
+				tile = _tile_board[tile_minor_axis_min]
+			elif submission.has(tile_minor_axis_min):
+				tile = submission[tile_minor_axis_min]
+			else:
+				break
+			
+			tile_minor_axis_word = tile.get_face_string() + tile_minor_axis_word
+			tile_minor_axis_points += tile.get_face_points() * get_tile_board_multiplier_letter(tile_minor_axis_min)
+			tile_minor_axis_points_multiplier *= get_tile_board_multiplier_word(tile_minor_axis_min)
+		
+		# Navigate to minor axis max.
+		var tile_minor_axis_max: Vector2i = tile_position
+		while true:
+			tile_minor_axis_max += tile_minor_axis
+			if _tile_board.has(tile_minor_axis_max):
+				tile = _tile_board[tile_minor_axis_max]
+			elif submission.has(tile_minor_axis_max):
+				tile = submission[tile_minor_axis_max]
+			else:
+				break
+			
+			tile_minor_axis_word = tile.get_face_string() + tile_minor_axis_word
+			tile_minor_axis_points += tile.get_face_points() * get_tile_board_multiplier_letter(tile_minor_axis_max)
+			tile_minor_axis_points_multiplier *= get_tile_board_multiplier_word(tile_minor_axis_max)
+		
+		if tile_minor_axis_word.length() > 1:
+			words.append(tile_minor_axis_word)
+			points += tile_minor_axis_points * tile_minor_axis_points_multiplier
+	
+	# Check words with a word database.
+	for word: String in words:
+		if !WordDatabase.is_word(word):
+			return SubmissionResult.INVALID_WORD
+	
+	# Submission passed all checks!
+	if !is_multiplayer_authority():
+		_submission_validating = true
+		_rpc_request_submission_validate.rpc_id(get_multiplayer_authority(), _encode_tile_board(submission))
+		return SubmissionResult.AWAITING
+	
+	set_player_submit(player_id, true)
+	# TODO: Fill player tiles.
+	set_player_tiles(player_id, player_tiles)
+	set_player_points(player_id, get_player_points(player_id) + points)
+	for tile_position: Vector2i in submission:
+		add_tile_board_tile(tile_position, submission[tile_position])
+	return SubmissionResult.OK
 
 #endregion
-#
+
 #func _ready() -> void:
 	#if Engine.is_editor_hint():
 		#return
@@ -875,11 +884,13 @@ func _remove_player_id(player_id: int) -> bool:
 		#return true
 	#
 	#return _players[a].points > _players[b].points
-#
-#func _physics_process(delta: float) -> void:
-	#if Engine.is_editor_hint():
-		#return
-	#
+
+func _physics_process(delta: float) -> void:
+	super(delta)
+	
+	if Engine.is_editor_hint():
+		return
+	
 	#if _dirty:
 		## Sort players.
 		#var players_sorted: Array[int] = []
@@ -893,46 +904,37 @@ func _remove_player_id(player_id: int) -> bool:
 				#_players[player_id].place = place
 				#place += 1
 		#
-		#updated.emit()
 		#_dirty = false
-	#
-	## TODO: handle disconnections in game.gd (should free game instances)
-	#if !multiplayer.has_multiplayer_peer():
-		#push_error("GameInstanceLobbyBoard \"%s\" | Multiplayer is not active." % [self.name])
-		#get_tree().quit(1)# if this happens i am terrible programmer
-		#return
-	#
-	#if !_play:
-		## TODO: if no players, stop game instance (notify game.gd with signal? then queue frees this)?
-		#
-		#if is_multiplayer_authority():
-			## Start play loop when all players are ready.
-			## TODO: Start a countdown instead? If 50% of players are ready, maybe start a countdown at 20 seconds?
-			#if get_all_players_ready():
-				#set_play(true)
-	#else:
-		## Decrement turn timer.
-		#if _turn_timer > 0.0:
-			#_turn_timer = maxf(_turn_timer - delta, 0.0)
-		#
-		#if is_multiplayer_authority():
-			#if _turn_timer > 3.0 && get_all_players_submitted():
-				## Fast-forward turn timer if all players have submitted.
-				#set_turn_timer(3.0)
-			#elif is_zero_approx(_turn_timer):
-				## Increment turn count on turn timer timeout. Stop on last turn.
-				#if _turn_count < _turn_count_max:
-					## Prepare next turn.
-					#set_turn_count(_turn_count + 1)
-					#set_turn_timer(_turn_timer_max)
-					#clear_all_players_submitted()
-				#else:
-					## Reset data and stop play loop.
-					## TODO: Bake leaderboard. _leaderboard_names _leaderboard_points
-					#clear_all_players_tiles()
-					#set_all_players_ready(false)
-					#clear_all_players_submitted()
-					#set_play(false)
+	
+	if !_board_play:
+		if is_multiplayer_authority():
+			# Start play loop when all players are ready.
+			# TODO: Start a countdown instead? If 50% of players are ready, maybe start a countdown at 20 seconds?
+			if get_all_players_ready():
+				set_board_play(true)
+	else:
+		# Process turn timer.
+		if _turn_timer > 0.0:
+			_turn_timer = maxf(_turn_timer - delta, 0.0)
+		
+		if is_multiplayer_authority():
+			if _turn_timer > 3.0 && get_all_players_submit():
+				# Fast-forward turn timer if all players have submitted.
+				set_turn_timer(3.0)
+			elif is_zero_approx(_turn_timer):
+				# Increment turn count on turn timer timeout. Stop on last turn.
+				if _turn_count < _turn_count_max:
+					# Prepare next turn.
+					set_turn_count(_turn_count + 1)
+					set_turn_timer(_turn_timer_max)
+					set_all_players_submit(false)
+				else:
+					# Reset data and stop play loop.
+					# TODO: Bake leaderboard. _leaderboard_names _leaderboard_points
+					clear_all_players_tiles()
+					set_all_players_ready(false)
+					set_all_players_submit(false)
+					set_board_play(false)
 
 #region Byte Encoding/Decoding Helpers
 
