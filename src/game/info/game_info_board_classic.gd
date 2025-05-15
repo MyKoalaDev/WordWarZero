@@ -1,5 +1,5 @@
 @tool
-extends "game_instance_board.gd"
+extends "game_info_board.gd"
 
 class _PlayerDataClassic:
 	extends RefCounted
@@ -181,7 +181,7 @@ func _set_all_players_submit(player_submit: bool) -> bool:
 
 func set_all_players_submit(player_submit: bool) -> bool:
 	if !is_multiplayer_authority():
-		push_error("GameInstanceBoard \"%s\" | Failed to set all players submit to \'%s\': unauthorized." % [self.name, str(player_submit)])
+		push_error("GameInfoBoard \"%s\" | Failed to set all players submit to \'%s\': unauthorized." % [self.name, str(player_submit)])
 		return false
 	
 	return _set_all_players_submit(player_submit)
@@ -192,14 +192,14 @@ func _rpc_set_all_players_submit(player_submit: bool) -> void:
 
 func get_player_submit(player_id: int) -> bool:
 	if !has_player_id(player_id):
-		push_error("GameInstanceBoard \"%s\" | Failed to get player submit for player ID '%d': could not find player ID." % [self.name, player_id])
+		push_error("GameInfoBoard \"%s\" | Failed to get player submit for player ID '%d': could not find player ID." % [self.name, player_id])
 		return false
 	
 	return _players_classic[player_id].player_submit
 
 func _set_player_submit(player_id: int, player_submit: bool) -> bool:
 	if !has_player_id(player_id):
-		push_error("GameInstanceBoard \"%s\" | Failed to set player submit to \'%s\' for player ID \'%d\': could not find player ID." % [self.name, str(player_submit), player_id])
+		push_error("GameInfoBoard \"%s\" | Failed to set player submit to \'%s\' for player ID \'%d\': could not find player ID." % [self.name, str(player_submit), player_id])
 		return false
 	
 	if _players_classic[player_id].player_submit == player_submit:
@@ -218,7 +218,7 @@ func _set_player_submit(player_id: int, player_submit: bool) -> bool:
 
 func set_player_submit(player_id: int, player_submit: bool) -> bool:
 	if !is_multiplayer_authority():
-		push_error("GameInstanceBoard \"%s\" | Failed to set player submit to \'%s\' for player ID \'%d\': unauthorized." % [self.name, str(player_submit), player_id])
+		push_error("GameInfoBoard \"%s\" | Failed to set player submit to \'%s\' for player ID \'%d\': unauthorized." % [self.name, str(player_submit), player_id])
 		return false
 	
 	return _set_player_submit(player_id, player_submit)
@@ -246,7 +246,7 @@ func _clear_all_players_tiles() -> bool:
 
 func clear_all_players_tiles() -> bool:
 	if !is_multiplayer_authority():
-		push_error("GameInstanceBoard \"%s\" | Failed to clear all player tiles: unauthorized." % [self.name])
+		push_error("GameInfoBoard \"%s\" | Failed to clear all player tiles: unauthorized." % [self.name])
 		return false
 	
 	return _clear_all_players_tiles()
@@ -257,7 +257,7 @@ func _rpc_clear_all_players_tiles() -> void:
 
 func get_player_tiles(player_id: int) -> Array[Tile]:
 	if has_player_id(player_id):
-		push_error("GameInstanceBoard \"%s\" | Failed to get player tiles for player ID '%d': could not find player ID." % [self.name, player_id])
+		push_error("GameInfoBoard \"%s\" | Failed to get player tiles for player ID '%d': could not find player ID." % [self.name, player_id])
 		return []
 	
 	var tiles: Array[Tile] = []
@@ -268,7 +268,7 @@ func get_player_tiles(player_id: int) -> Array[Tile]:
 
 func _set_player_tiles(player_id: int, player_tiles: Array[Tile]) -> bool:
 	if !has_player_id(player_id):
-		push_error("GameInstanceBoard \"%s\" | Failed to set player tiles to \'%s\' for player ID \'%d\': could not find player ID." % [self.name, str(player_tiles), player_id])
+		push_error("GameInfoBoard \"%s\" | Failed to set player tiles to \'%s\' for player ID \'%d\': could not find player ID." % [self.name, str(player_tiles), player_id])
 		return false
 	
 	var tiles: Array[Tile] = []
@@ -288,7 +288,7 @@ func _set_player_tiles(player_id: int, player_tiles: Array[Tile]) -> bool:
 
 func set_player_tiles(player_id: int, player_tiles: Array[Tile]) -> bool:
 	if !is_multiplayer_authority():
-		push_error("GameInstanceBoard \"%s\" | Failed to set player tiles to \'%s\' for player ID \'%d\': unauthorized." % [self.name, str(player_tiles), player_id])
+		push_error("GameInfoBoard \"%s\" | Failed to set player tiles to \'%s\' for player ID \'%d\': unauthorized." % [self.name, str(player_tiles), player_id])
 		return false
 	
 	return _set_player_tiles(player_id, player_tiles)
@@ -316,7 +316,7 @@ func _clear_all_players_points() -> bool:
 
 func clear_all_players_points() -> bool:
 	if !is_multiplayer_authority():
-		push_error("GameInstanceBoard \"%s\" | Failed to clear all player points: unauthorized." % [self.name])
+		push_error("GameInfoBoard \"%s\" | Failed to clear all player points: unauthorized." % [self.name])
 		return false
 	
 	return _clear_all_players_points()
@@ -327,14 +327,14 @@ func _rpc_clear_all_players_points() -> void:
 
 func get_player_points(player_id: int) -> int:
 	if has_player_id(player_id):
-		push_error("GameInstanceBoard \"%s\" | Failed to get player points for player ID '%d': could not find player ID." % [self.name, player_id])
+		push_error("GameInfoBoard \"%s\" | Failed to get player points for player ID '%d': could not find player ID." % [self.name, player_id])
 		return 0
 	
 	return _players_classic[player_id].player_points
 
 func _set_player_points(player_id: int, player_points: int) -> bool:
 	if !has_player_id(player_id):
-		push_error("GameInstanceBoard \"%s\" | Failed to set player points to \'%s\' for player ID \'%d\': could not find player ID." % [self.name, str(player_points), player_id])
+		push_error("GameInfoBoard \"%s\" | Failed to set player points to \'%s\' for player ID \'%d\': could not find player ID." % [self.name, str(player_points), player_id])
 		return false
 	
 	_players_classic[player_id].player_points = player_points
@@ -350,7 +350,7 @@ func _set_player_points(player_id: int, player_points: int) -> bool:
 
 func set_player_points(player_id: int, player_points: int) -> bool:
 	if !is_multiplayer_authority():
-		push_error("GameInstanceBoard \"%s\" | Failed to set player points to \'%s\' for player ID \'%d\': unauthorized." % [self.name, str(player_points), player_id])
+		push_error("GameInfoBoard \"%s\" | Failed to set player points to \'%s\' for player ID \'%d\': unauthorized." % [self.name, str(player_points), player_id])
 		return false
 	
 	return _set_player_points(player_id, player_points)
@@ -387,7 +387,7 @@ func _set_turn_count(turn_count: int) -> bool:
 
 func set_turn_count(turn_count: int) -> bool:
 	if !is_multiplayer_authority():
-		push_error("GameInstanceBoard \"%s\" | Failed to set turn count to \'%d\': unauthorized." % [self.name, turn_count])
+		push_error("GameInfoBoard \"%s\" | Failed to set turn count to \'%d\': unauthorized." % [self.name, turn_count])
 		return false
 	
 	if !_set_turn_count(turn_count):
@@ -420,7 +420,7 @@ func _set_turn_count_max(turn_count_max: int) -> bool:
 
 func set_turn_count_max(turn_count_max: int) -> bool:
 	if !is_multiplayer_authority():
-		push_error("GameInstanceBoard \"%s\" | Failed to set turn count max to \'%d\': unauthorized." % [self.name, turn_count_max])
+		push_error("GameInfoBoard \"%s\" | Failed to set turn count max to \'%d\': unauthorized." % [self.name, turn_count_max])
 		return false
 	
 	if !_set_turn_count_max(turn_count_max):
@@ -462,7 +462,7 @@ func _set_turn_timer(turn_timer: int) -> bool:
 
 func set_turn_timer(turn_timer: int) -> bool:
 	if !is_multiplayer_authority():
-		push_error("GameInstanceBoard \"%s\" | Failed to set turn timer to \'%d\': unauthorized." % [self.name, turn_timer])
+		push_error("GameInfoBoard \"%s\" | Failed to set turn timer to \'%d\': unauthorized." % [self.name, turn_timer])
 		return false
 	
 	if !_set_turn_timer(turn_timer):
@@ -495,7 +495,7 @@ func _set_turn_timer_max(turn_timer_max: int) -> bool:
 
 func set_turn_timer_max(turn_timer_max: int) -> bool:
 	if !is_multiplayer_authority():
-		push_error("GameInstanceBoard \"%s\" | Failed to set turn timer max to \'%d\': unauthorized." % [self.name, turn_timer_max])
+		push_error("GameInfoBoard \"%s\" | Failed to set turn timer max to \'%d\': unauthorized." % [self.name, turn_timer_max])
 		return false
 	
 	if !_set_turn_timer_max(turn_timer_max):
@@ -546,7 +546,7 @@ func _set_tile_board(tile_board: Dictionary[Vector2i, Tile]) -> bool:
 
 func set_tile_board(tile_board: Dictionary[Vector2i, Tile]) -> bool:
 	if !is_multiplayer_authority():
-		push_error("GameInstanceBoard \"%s\" | Failed to set tile board: unauthorized." % [self.name])
+		push_error("GameInfoBoard \"%s\" | Failed to set tile board: unauthorized." % [self.name])
 		return false
 	
 	return _set_tile_board(tile_board)
@@ -568,7 +568,7 @@ func _clear_tile_board() -> bool:
 
 func clear_tile_board() -> bool:
 	if !is_multiplayer_authority():
-		push_error("GameInstanceBoard \"%s\" | Failed to clear tile board: unauthorized." % [self.name])
+		push_error("GameInfoBoard \"%s\" | Failed to clear tile board: unauthorized." % [self.name])
 		return false
 	
 	return _clear_tile_board()
@@ -579,7 +579,7 @@ func _rpc_clear_tile_board() -> void:
 
 func _add_tile_board_tile(tile_position: Vector2i, tile: Tile) -> bool:
 	if _tile_board.has(tile_position):
-		push_error("GameInstanceBoard \"%s\" | Failed to add tile board tile: a tile already exists at (%d, %d)." % [self.name, tile_position.x, tile_position.y])
+		push_error("GameInfoBoard \"%s\" | Failed to add tile board tile: a tile already exists at (%d, %d)." % [self.name, tile_position.x, tile_position.y])
 		return false
 	
 	_tile_board[tile_position] = tile
@@ -597,7 +597,7 @@ func _add_tile_board_tile(tile_position: Vector2i, tile: Tile) -> bool:
 
 func add_tile_board_tile(tile_position: Vector2i, tile: Tile) -> bool:
 	if !is_multiplayer_authority():
-		push_error("GameInstanceBoard \"%s\" | Failed to add tile board tile: unauthorized." % [self.name])
+		push_error("GameInfoBoard \"%s\" | Failed to add tile board tile: unauthorized." % [self.name])
 		return false
 	
 	return _add_tile_board_tile(tile_position, tile)

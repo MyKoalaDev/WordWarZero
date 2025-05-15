@@ -1,15 +1,14 @@
-[gd_scene load_steps=21 format=4 uid="uid://nw2kb71xa2db"]
+[gd_scene load_steps=20 format=4 uid="uid://nw2kb71xa2db"]
 
 [ext_resource type="Script" uid="uid://lljyxnqqax7l" path="res://src/main.gd" id="1_db5cl"]
 [ext_resource type="TileSet" uid="uid://cyojl6rec7r5t" path="res://assets/board.tres" id="2_06ig3"]
-[ext_resource type="Script" uid="uid://c6hl88o0btr7v" path="res://src/game/game.gd" id="2_fphxj"]
 [ext_resource type="Script" uid="uid://jn8a64othr63" path="res://assets/game_camera.gd" id="2_j2eim"]
+[ext_resource type="Script" uid="uid://c6hl88o0btr7v" path="res://src/game/game.gd" id="2_ul5qt"]
 [ext_resource type="PackedScene" uid="uid://dhlhhmwhrxbao" path="res://assets/game/game_menu.tscn" id="3_2rvxm"]
-[ext_resource type="Script" uid="uid://crkk8i5f1immm" path="res://src/game/instance/game_instance.gd" id="4_2rvxm"]
 [ext_resource type="Script" uid="uid://b070kcr60nwxj" path="res://src/game/game_lobby.gd" id="5_ew6cl"]
 [ext_resource type="Script" uid="uid://b2ot00vang7bj" path="res://src/tile/tile_board_2d.gd" id="5_m5usj"]
 [ext_resource type="Texture2D" uid="uid://bgp2rrk71wsts" path="res://assets/word_war.png" id="6_ew6cl"]
-[ext_resource type="Script" uid="uid://b2x1h1hld85pa" path="res://src/game/game_board.gd" id="6_km2eh"]
+[ext_resource type="Script" uid="uid://b2x1h1hld85pa" path="res://src/game/play/game_play_board.gd" id="6_km2eh"]
 [ext_resource type="Script" uid="uid://b3eo1vdw04anx" path="res://src/network.gd" id="6_ujfqy"]
 [ext_resource type="Texture2D" uid="uid://bclltyowlltbw" path="res://assets/background_texture.png" id="6_wpieh"]
 [ext_resource type="Script" uid="uid://0yjj5ris7xvr" path="res://src/game/game_lobby_list.gd" id="7_wpieh"]
@@ -17,7 +16,7 @@
 [ext_resource type="Script" uid="uid://ct314rl61mc55" path="res://src/game/game_results.gd" id="10_2rvxm"]
 [ext_resource type="PackedScene" uid="uid://cfmdrd7ailidu" path="res://assets/confetti.tscn" id="11_6eca0"]
 [ext_resource type="Texture2D" uid="uid://b3v7wg38eg8e3" path="res://assets/board.png" id="12_h4xlo"]
-[ext_resource type="Script" uid="uid://dv4dir2oybjfm" path="res://src/game/game_leaderboard.gd" id="13_ew6cl"]
+[ext_resource type="Script" uid="uid://dv4dir2oybjfm" path="res://src/game/play/game_leaderboard.gd" id="13_ew6cl"]
 [ext_resource type="Script" uid="uid://d0owujx51evto" path="res://src/tile_map_layer_data.gd" id="16_2rvxm"]
 
 [sub_resource type="AtlasTexture" id="AtlasTexture_vvw4a"]
@@ -28,18 +27,15 @@ region = Rect2(0, 128, 128, 128)
 script = ExtResource("1_db5cl")
 
 [node name="game" type="Node" parent="."]
-script = ExtResource("2_fphxj")
+script = ExtResource("2_ul5qt")
 
 [node name="network" type="Node" parent="game"]
 script = ExtResource("6_ujfqy")
 metadata/_custom_type_script = "uid://b3eo1vdw04anx"
 
-[node name="game_instance" type="Node" parent="game"]
-script = ExtResource("4_2rvxm")
+[node name="game_info" type="Node" parent="game"]
 
-[node name="players" type="Node" parent="game/game_instance"]
-
-[node name="lobbies" type="Node" parent="game/game_instance"]
+[node name="game_info_players" type="Node" parent="game/game_info"]
 
 [node name="play" type="Node2D" parent="game"]
 visible = false

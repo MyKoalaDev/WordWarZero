@@ -6,22 +6,19 @@ class _PlayerData:
 	var player_ready: bool = false
 	var player_spectator: bool = false
 
-## Indicates if this board should not be automatically deleted when this has no players.
-var persistent: bool = false
-
 var _force_sync_queue: Array[int] = []
 
 func _force_sync_queue_add(player_id: int) -> bool:
 	if !is_multiplayer_authority():
-		push_error("GameInstanceBoard \"%s\" | Failed to force sync player ID \'%d\': unauthorized." % [self.name, player_id])
+		push_error("GameInfoBoard \"%s\" | Failed to force sync player ID \'%d\': unauthorized." % [self.name, player_id])
 		return false
 	
 	if !has_player_id(player_id):
-		push_error("GameInstanceBoard \"%s\" | Failed to force sync player ID \'%d\': player ID does not exist." % [self.name, player_id])
+		push_error("GameInfoBoard \"%s\" | Failed to force sync player ID \'%d\': player ID does not exist." % [self.name, player_id])
 		return false
 	
 	if player_id == multiplayer.get_unique_id():
-		push_error("GameInstanceBoard \"%s\" | Failed to force sync player ID \'%d\': cannot force sync self." % [self.name, player_id])
+		push_error("GameInfoBoard \"%s\" | Failed to force sync player ID \'%d\': cannot force sync self." % [self.name, player_id])
 		return false
 	
 	if _force_sync_queue.has(player_id):
@@ -32,15 +29,15 @@ func _force_sync_queue_add(player_id: int) -> bool:
 
 func _force_sync(player_id: int) -> bool:
 	if !is_multiplayer_authority():
-		push_error("GameInstanceBoard \"%s\" | Failed to force sync player ID \'%d\': unauthorized." % [self.name, player_id])
+		push_error("GameInfoBoard \"%s\" | Failed to force sync player ID \'%d\': unauthorized." % [self.name, player_id])
 		return false
 	
 	if !has_player_id(player_id):
-		push_error("GameInstanceBoard \"%s\" | Failed to force sync player ID \'%d\': player ID does not exist." % [self.name, player_id])
+		push_error("GameInfoBoard \"%s\" | Failed to force sync player ID \'%d\': player ID does not exist." % [self.name, player_id])
 		return false
 	
 	if player_id == multiplayer.get_unique_id():
-		push_error("GameInstanceBoard \"%s\" | Failed to force sync player ID \'%d\': cannot force sync self." % [self.name, player_id])
+		push_error("GameInfoBoard \"%s\" | Failed to force sync player ID \'%d\': cannot force sync self." % [self.name, player_id])
 		return false
 	
 	_rpc_set_board_name.rpc_id(player_id, _board_name)
@@ -77,7 +74,7 @@ func get_player_ids() -> Array[int]:
 
 func _add_player_id(player_id: int) -> bool:
 	if _players.has(player_id):
-		push_error("GameInstanceBoard \"%s\" | Failed to add player ID \'%d\': player ID already exists." % [self.name, player_id])
+		push_error("GameInfoBoard \"%s\" | Failed to add player ID \'%d\': player ID already exists." % [self.name, player_id])
 		return false
 	
 	_players[player_id] = _PlayerData.new()
@@ -96,7 +93,7 @@ func _add_player_id(player_id: int) -> bool:
 @rpc("authority", "call_remote", "reliable", 0)
 func add_player_id(player_id: int) -> bool:
 	if !is_multiplayer_authority():
-		push_error("GameInstanceBoard \"%s\" | Failed to add player ID \'%d\': unauthorized." % [self.name, player_id])
+		push_error("GameInfoBoard \"%s\" | Failed to add player ID \'%d\': unauthorized." % [self.name, player_id])
 		return false
 	
 	return _add_player_id(player_id)
@@ -107,7 +104,7 @@ func _rpc_add_player_id(player_id: int) -> void:
 
 func _remove_player_id(player_id: int) -> bool:
 	if !has_player_id(player_id):
-		push_error("GameInstanceBoard \"%s\" | Failed to remove player ID \'%d\': could not find player ID." % [self.name, player_id])
+		push_error("GameInfoBoard \"%s\" | Failed to remove player ID \'%d\': could not find player ID." % [self.name, player_id])
 		return false
 	
 	_players.erase(player_id)
@@ -126,7 +123,7 @@ func _remove_player_id(player_id: int) -> bool:
 
 func remove_player_id(player_id: int) -> bool:
 	if !is_multiplayer_authority():
-		push_error("GameInstanceBoard \"%s\" | Failed to remove player ID \'%d\': unauthorized." % [self.name, player_id])
+		push_error("GameInfoBoard \"%s\" | Failed to remove player ID \'%d\': unauthorized." % [self.name, player_id])
 		return false
 	
 	return _remove_player_id(player_id)
@@ -164,7 +161,7 @@ func _set_all_players_ready(player_ready: bool) -> bool:
 
 func set_all_players_ready(player_ready: bool) -> bool:
 	if !is_multiplayer_authority():
-		push_error("GameInstanceBoard \"%s\" | Failed to set all players ready to \'%s\': unauthorized." % [self.name, str(player_ready)])
+		push_error("GameInfoBoard \"%s\" | Failed to set all players ready to \'%s\': unauthorized." % [self.name, str(player_ready)])
 		return false
 	
 	return _set_all_players_ready(player_ready)
@@ -175,14 +172,14 @@ func _rpc_set_all_players_ready(player_ready: bool) -> void:
 
 func get_player_ready(player_id: int) -> bool:
 	if !has_player_id(player_id):
-		push_error("GameInstanceBoard \"%s\" | Failed to get player ready for player ID '%d': could not find player ID." % [self.name, player_id])
+		push_error("GameInfoBoard \"%s\" | Failed to get player ready for player ID '%d': could not find player ID." % [self.name, player_id])
 		return false
 	
 	return _players[player_id].player_ready
 
 func _set_player_ready(player_id: int, player_ready: bool) -> bool:
 	if !has_player_id(player_id):
-		push_error("GameInstanceBoard \"%s\" | Failed to set player ready to \'%s\' for player ID \'%d\': could not find player ID." % [self.name, str(player_ready), player_id])
+		push_error("GameInfoBoard \"%s\" | Failed to set player ready to \'%s\' for player ID \'%d\': could not find player ID." % [self.name, str(player_ready), player_id])
 		return false
 	
 	if _players[player_id].player_ready == player_ready:
@@ -201,7 +198,7 @@ func _set_player_ready(player_id: int, player_ready: bool) -> bool:
 
 func set_player_ready(player_id: int, player_ready: bool) -> bool:
 	if !is_multiplayer_authority():
-		push_error("GameInstanceBoard \"%s\" | Failed to set player ready to \'%s\' for player ID \'%d\': unauthorized." % [self.name, str(player_ready), player_id])
+		push_error("GameInfoBoard \"%s\" | Failed to set player ready to \'%s\' for player ID \'%d\': unauthorized." % [self.name, str(player_ready), player_id])
 		return false
 	
 	return _set_player_ready(player_id, player_ready)
@@ -212,12 +209,12 @@ func _rpc_set_player_ready(player_id: int, player_ready: bool) -> void:
 
 func request_set_local_player_ready(player_ready: bool) -> bool:
 	if is_multiplayer_authority():
-		push_error("GameInstanceBoard \"%s\" | Failed to request to set local player ready to \'%s\': authority may not request." % [self.name, str(player_ready)])
+		push_error("GameInfoBoard \"%s\" | Failed to request to set local player ready to \'%s\': authority may not request." % [self.name, str(player_ready)])
 		return false
 	
 	var player_id: int = multiplayer.get_unique_id()
 	if !has_player_id(player_id):
-		push_error("GameInstanceBoard \"%s\" | Failed to request to set local player ready to \'%s\': could not find local player ID." % [self.name, str(player_ready), player_id])
+		push_error("GameInfoBoard \"%s\" | Failed to request to set local player ready to \'%s\': could not find local player ID." % [self.name, str(player_ready), player_id])
 		return false
 	
 	if _players[player_id].player_ready == player_ready:
@@ -230,7 +227,7 @@ func request_set_local_player_ready(player_ready: bool) -> bool:
 func _rpc_request_set_local_player_ready(player_ready: bool) -> void:
 	var player_id: int = multiplayer.get_remote_sender_id()
 	if !is_multiplayer_authority():
-		push_error("GameInstanceBoard \"%s\" | (RPC) Failed to process request from player ID \'%d\' to set local player name to \'%s\': non authority received request." % [self.name, player_id, str(player_ready)])
+		push_error("GameInfoBoard \"%s\" | (RPC) Failed to process request from player ID \'%d\' to set local player name to \'%s\': non authority received request." % [self.name, player_id, str(player_ready)])
 		return
 	
 	_set_player_ready(player_id, player_ready)
@@ -242,14 +239,14 @@ signal player_spectator_changed(player_id: int, player_spectator: bool)
 
 func get_player_spectator(player_id: int) -> bool:
 	if !has_player_id(player_id):
-		push_error("GameInstanceBoard \"%s\" | Failed to get player spectator for player ID '%d': could not find player ID." % [self.name, player_id])
+		push_error("GameInfoBoard \"%s\" | Failed to get player spectator for player ID '%d': could not find player ID." % [self.name, player_id])
 		return false
 	
 	return _players[player_id].player_spectator
 
 func _set_player_spectator(player_id: int, player_spectator: bool) -> bool:
 	if !has_player_id(player_id):
-		push_error("GameInstanceBoard \"%s\" | Failed to set player spectator to \'%s\' for player ID \'%d\': could not find player ID." % [self.name, str(player_spectator), player_id])
+		push_error("GameInfoBoard \"%s\" | Failed to set player spectator to \'%s\' for player ID \'%d\': could not find player ID." % [self.name, str(player_spectator), player_id])
 		return false
 	
 	if _players[player_id].player_spectator == player_spectator:
@@ -268,7 +265,7 @@ func _set_player_spectator(player_id: int, player_spectator: bool) -> bool:
 
 func set_player_spectator(player_id: int, player_spectator: bool) -> bool:
 	if !is_multiplayer_authority():
-		push_error("GameInstanceBoard \"%s\" | Failed to set player spectator to \'%s\' for player ID \'%d\': unauthorized." % [self.name, str(player_spectator), player_id])
+		push_error("GameInfoBoard \"%s\" | Failed to set player spectator to \'%s\' for player ID \'%d\': unauthorized." % [self.name, str(player_spectator), player_id])
 		return false
 	
 	return _set_player_spectator(player_id, player_spectator)
@@ -279,12 +276,12 @@ func _rpc_set_player_spectator(player_id: int, player_spectator: bool) -> void:
 
 func request_set_local_player_spectator(player_spectator: bool) -> bool:
 	if is_multiplayer_authority():
-		push_error("GameInstanceBoard \"%s\" | Failed to request to set local player spectator to \'%s\': authority may not request." % [self.name, str(player_spectator)])
+		push_error("GameInfoBoard \"%s\" | Failed to request to set local player spectator to \'%s\': authority may not request." % [self.name, str(player_spectator)])
 		return false
 	
 	var player_id: int = multiplayer.get_unique_id()
 	if !has_player_id(player_id):
-		push_error("GameInstanceBoard \"%s\" | Failed to request to set local player spectator to \'%s\': could not find local player ID." % [self.name, str(player_spectator), player_id])
+		push_error("GameInfoBoard \"%s\" | Failed to request to set local player spectator to \'%s\': could not find local player ID." % [self.name, str(player_spectator), player_id])
 		return false
 	
 	if _players[player_id].player_spectator == player_spectator:
@@ -297,7 +294,7 @@ func request_set_local_player_spectator(player_spectator: bool) -> bool:
 func _rpc_request_set_local_player_spectator(player_spectator: bool) -> void:
 	var player_id: int = multiplayer.get_remote_sender_id()
 	if !is_multiplayer_authority():
-		push_error("GameInstanceBoard \"%s\" | (RPC) Failed to process request from player ID \'%d\' to set local player name to \'%s\': non authority received request." % [self.name, player_id, str(player_spectator)])
+		push_error("GameInfoBoard \"%s\" | (RPC) Failed to process request from player ID \'%d\' to set local player name to \'%s\': non authority received request." % [self.name, player_id, str(player_spectator)])
 		return
 	
 	_set_player_spectator(player_id, player_spectator)
@@ -333,7 +330,7 @@ func _set_board_name(board_name: String) -> bool:
 
 func set_board_name(board_name: String) -> bool:
 	if !is_multiplayer_authority():
-		push_error("GameInstanceBoard \"%s\" | Failed to set board name to \'%s\': only the authority can set." % [self.name, board_name])
+		push_error("GameInfoBoard \"%s\" | Failed to set board name to \'%s\': only the authority can set." % [self.name, board_name])
 		return false
 	
 	return _set_board_name(board_name)
@@ -366,7 +363,7 @@ func _set_board_public(board_public: bool) -> bool:
 
 func set_board_public(board_public: bool) -> bool:
 	if !is_multiplayer_authority():
-		push_error("GameInstanceBoard \"%s\" | Failed to set board public to \'%s\': only the authority can set." % [self.name, board_public])
+		push_error("GameInfoBoard \"%s\" | Failed to set board public to \'%s\': only the authority can set." % [self.name, board_public])
 		return false
 	
 	return _set_board_public(board_public)
@@ -385,7 +382,7 @@ func check_board_password(board_password: String) -> bool:
 
 func set_board_password(board_password: String) -> bool:
 	if !is_multiplayer_authority():
-		push_error("GameInstanceBoard \"%s\" | Failed to set board password: only the authority can set." % [self.name])
+		push_error("GameInfoBoard \"%s\" | Failed to set board password: only the authority can set." % [self.name])
 		return false
 	
 	if _board_password == board_password:

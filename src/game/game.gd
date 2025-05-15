@@ -12,14 +12,7 @@ class_name Game
 # do the player instance sanity check inside loop rather than signal up here?
 # then can move the request stuff back to instance, for cleaner code
 
-enum State {
-	NONE,
-	SERVER,
-	CLIENT,
-	OFFLINE,
-}
-
-const GameInstance: = preload("instance/game_instance.gd")
+const GameInfo: = preload("info/game_info.gd")
 const GameMenu: = preload("menu/game_menu.gd")
 
 const DEFAULT_SERVER_PORT: int = 30666
@@ -35,9 +28,6 @@ var _game_instance_root: Node = $game_instances as Node
 @onready
 var _game_menu: GameMenu = $gui/game_menu as GameMenu
 
-## Hashmap of game instance IDs to game instances.
-var _game_instances: Dictionary[int, GameInstance] = {}
-
 func is_valid_player_name(player_name: String) -> bool:
 	if player_name.is_empty():
 		return false
@@ -46,19 +36,6 @@ func is_valid_player_name(player_name: String) -> bool:
 	if player_name.length() > PLAYER_NAME_MAX_LENGTH:
 		return false
 	return true
-
-@rpc("any_peer", "call_remote", "reliable", 0)
-func _rpc_request_set_player_name(player_name: String) -> void:
-	if !is_multiplayer_authority():
-		return
-	
-	if !is_valid_player_name(player_name):
-		return
-	
-	var player_id: int = multiplayer.get_remote_sender_id()
-	if !_players[player_id].player_name_set:
-		_players[player_id].player_name_set = true
-		_players[player_id].player_name = player_name
 
 #endregion
 #region Instance

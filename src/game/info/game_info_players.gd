@@ -8,15 +8,15 @@ class _PlayerData:
 
 func _force_sync(player_id: int) -> bool:
 	if !is_multiplayer_authority():
-		push_error("GameInstancePlayers \"%s\" | Failed to force sync player ID \'%d\': unauthorized." % [self.name, player_id])
+		push_error("GameInfoPlayers \"%s\" | Failed to force sync player ID \'%d\': unauthorized." % [self.name, player_id])
 		return false
 	
 	if !_players.has(player_id):
-		push_error("GameInstancePlayers \"%s\" | Failed to force sync player ID \'%d\': player ID does not exist." % [self.name, player_id])
+		push_error("GameInfoPlayers \"%s\" | Failed to force sync player ID \'%d\': player ID does not exist." % [self.name, player_id])
 		return false
 	
 	if player_id == multiplayer.get_unique_id():
-		push_error("GameInstancePlayers \"%s\" | Failed to force sync player ID \'%d\': cannot force sync self." % [self.name, player_id])
+		push_error("GameInfoPlayers \"%s\" | Failed to force sync player ID \'%d\': cannot force sync self." % [self.name, player_id])
 		return false
 	
 	for _player_id: int in _players:
@@ -39,7 +39,7 @@ func get_player_ids() -> Array[int]:
 
 func _add_player_id(player_id: int) -> bool:
 	if _players.has(player_id):
-		push_error("GameInstancePlayers \"%s\" | Failed to add player ID \'%d\': player ID already exists." % [self.name, player_id])
+		push_error("GameInfoPlayers \"%s\" | Failed to add player ID \'%d\': player ID already exists." % [self.name, player_id])
 		return false
 	
 	_players[player_id] = _PlayerData.new()
@@ -57,7 +57,7 @@ func _add_player_id(player_id: int) -> bool:
 
 func add_player_id(player_id: int) -> bool:
 	if !is_multiplayer_authority():
-		push_error("GameInstancePlayers \"%s\" | Failed to add player ID \'%d\': unauthorized." % [self.name, player_id])
+		push_error("GameInfoPlayers \"%s\" | Failed to add player ID \'%d\': unauthorized." % [self.name, player_id])
 		return false
 	
 	return _add_player_id(player_id)
@@ -68,7 +68,7 @@ func _rpc_add_player_id(player_id: int) -> void:
 
 func _remove_player_id(player_id: int) -> bool:
 	if !_players.has(player_id):
-		push_error("GameInstancePlayers \"%s\" | Failed to remove player ID \'%d\': could not find player ID." % [self.name, player_id])
+		push_error("GameInfoPlayers \"%s\" | Failed to remove player ID \'%d\': could not find player ID." % [self.name, player_id])
 		return false
 	
 	_players.erase(player_id)
@@ -87,7 +87,7 @@ func _remove_player_id(player_id: int) -> bool:
 
 func remove_player_id(player_id: int) -> bool:
 	if !is_multiplayer_authority():
-		push_error("GameInstancePlayers \"%s\" | Failed to remove player ID \'%d\': unauthorized." % [self.name, player_id])
+		push_error("GameInfoPlayers \"%s\" | Failed to remove player ID \'%d\': unauthorized." % [self.name, player_id])
 		return false
 	
 	return _remove_player_id(player_id)
@@ -103,14 +103,14 @@ signal player_name_changed(player_id: int, player_name_old: String, player_name_
 
 func get_player_name(player_id: int) -> String:
 	if !_players.has(player_id):
-		push_error("GameInstancePlayers \"%s\" | Failed to get player name for player ID '%d': could not find player ID." % [self.name, player_id])
+		push_error("GameInfoPlayers \"%s\" | Failed to get player name for player ID '%d': could not find player ID." % [self.name, player_id])
 		return ""
 	
 	return _players[player_id].player_name
 
 func _set_player_name(player_id: int, player_name: String) -> bool:
 	if !_players.has(player_id):
-		push_error("GameInstancePlayers \"%s\" | Failed to set player name to \'%s\' for player ID \'%d\': could not find player ID." % [self.name, player_name, player_id])
+		push_error("GameInfoPlayers \"%s\" | Failed to set player name to \'%s\' for player ID \'%d\': could not find player ID." % [self.name, player_name, player_id])
 		return false
 	
 	if _players[player_id].player_name == player_name:
@@ -133,7 +133,7 @@ func _set_player_name(player_id: int, player_name: String) -> bool:
 
 func set_player_name(player_id: int, player_name: String) -> bool:
 	if !is_multiplayer_authority():
-		push_error("GameInstancePlayers \"%s\" | Failed to set player name to \'%s\' for player ID \'%d\': unauthorized." % [self.name, player_name, player_id])
+		push_error("GameInfoPlayers \"%s\" | Failed to set player name to \'%s\' for player ID \'%d\': unauthorized." % [self.name, player_name, player_id])
 		return false
 	
 	return _set_player_name(player_id, player_name)
@@ -144,7 +144,7 @@ func _rpc_set_player_name(player_id: int, player_name: String) -> void:
 
 func request_set_local_player_name(player_name: String) -> bool:
 	if is_multiplayer_authority():
-		push_error("GameInstancePlayers \"%s\" | Failed to request to set local player_name to \'%s\': unauthorized." % [self.name, player_name])
+		push_error("GameInfoPlayers \"%s\" | Failed to request to set local player_name to \'%s\': unauthorized." % [self.name, player_name])
 		return false
 	
 	var player_id: int = multiplayer.get_unique_id()
@@ -159,7 +159,7 @@ func request_set_local_player_name(player_name: String) -> bool:
 func _rpc_request_set_local_player_name(player_name: String) -> void:
 	var player_id: int = multiplayer.get_remote_sender_id()
 	if !is_multiplayer_authority():
-		push_error("GameInstancePlayers \"%s\" | (RPC) Failed to process request from player ID \'%d\' to set local player name to \'%s\': non authority received request." % [self.name, player_id, player_name])
+		push_error("GameInfoPlayers \"%s\" | (RPC) Failed to process request from player ID \'%d\' to set local player name to \'%s\': non authority received request." % [self.name, player_id, player_name])
 		return
 	
 	_set_player_name(player_id, player_name)
